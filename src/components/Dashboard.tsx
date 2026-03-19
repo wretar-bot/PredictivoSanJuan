@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { MaintenanceRecord, Equipment, OperationType } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
@@ -19,9 +19,16 @@ export function Dashboard() {
   const [expandedAnalysis, setExpandedAnalysis] = useState<Record<string, boolean>>({});
   const [visibleCharts, setVisibleCharts] = useState<Record<string, boolean>>({});
   const [groupBy, setGroupBy] = useState<'equipment' | 'om'>('equipment');
+  const [siteName, setSiteName] = useState('');
 
   useEffect(() => {
     if (!auth.currentUser) return;
+
+    getDoc(doc(db, 'settings', 'global')).then(snap => {
+      if (snap.exists()) {
+        setSiteName(snap.data().siteName || '');
+      }
+    }).catch(console.error);
 
     const qRecords = query(
       collection(db, 'maintenance_records')
@@ -169,7 +176,10 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Historial de Mediciones</h1>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Historial de Mediciones</h1>
+          {siteName && <p className="text-sm text-zinc-500 mt-1">{siteName}</p>}
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto flex-wrap">
           <button

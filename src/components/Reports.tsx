@@ -298,6 +298,7 @@ export function Reports() {
               <div className="w-48 h-16 mb-2">
                 <EsentiaLogo />
               </div>
+              {companyInfo.site && <p className="text-sm font-medium text-zinc-700 mb-1">{companyInfo.site}</p>}
               <p className="text-sm text-zinc-500">Reporte de Análisis Predictivo</p>
             </div>
           </div>

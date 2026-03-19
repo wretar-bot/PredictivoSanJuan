@@ -13,7 +13,7 @@ import { checkAndCreateMonthlyBackup } from './utils/backup';
 import { Activity, PlusCircle, LayoutDashboard, Bot, LogOut, Menu, X, Settings2, FileText, Database, WifiOff, Wifi, Users } from 'lucide-react';
 import { EsentiaLogo } from './components/EsentiaLogo';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 function AppContent() {
@@ -24,6 +24,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'add' | 'equipment' | 'reports' | 'ai' | 'database' | 'users'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [siteName, setSiteName] = useState('');
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -31,6 +32,12 @@ function AppContent() {
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    getDoc(doc(db, 'settings', 'global')).then(snap => {
+      if (snap.exists()) {
+        setSiteName(snap.data().siteName || '');
+      }
+    }).catch(console.error);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -193,8 +200,11 @@ function AppContent() {
       {/* Mobile Header */}
       <div className="md:hidden bg-white border-b border-zinc-200 p-4 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-2">
-          <div className="w-24 h-8 flex items-center justify-center rounded-md overflow-hidden">
-            <EsentiaLogo />
+          <div className="flex flex-col">
+            <div className="w-24 h-8 flex items-center justify-center rounded-md overflow-hidden">
+              <EsentiaLogo />
+            </div>
+            {siteName && <span className="text-xs text-zinc-500 font-medium mt-1">{siteName}</span>}
           </div>
           <div className="ml-2 flex items-center" title={isOnline ? "Conectado" : "Sin conexión"}>
             {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-red-500" />}
@@ -241,8 +251,11 @@ function AppContent() {
       <aside className="hidden md:flex w-64 flex-col bg-white border-r border-zinc-200 h-screen sticky top-0">
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-32 h-12 flex items-center justify-center rounded-lg overflow-hidden shadow-sm">
-              <EsentiaLogo />
+            <div className="flex flex-col">
+              <div className="w-32 h-12 flex items-center justify-center rounded-lg overflow-hidden shadow-sm">
+                <EsentiaLogo />
+              </div>
+              {siteName && <span className="text-xs text-zinc-500 font-medium mt-1">{siteName}</span>}
             </div>
           </div>
           <div className="flex items-center" title={isOnline ? "Conectado" : "Sin conexión"}>
