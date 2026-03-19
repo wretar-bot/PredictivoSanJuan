@@ -115,11 +115,12 @@ service cloud.firestore {
     }
 
     function isValidEquipment(data) {
-      let requiredFields = ['name', 'techniques', 'driveType', 'inspectionPoints', 'authorUid', 'createdAt'];
-      let allowedFields = ['name', 'techniques', 'technique', 'driveType', 'inspectionPoints', 'alarms', 'aiAnalysis', 'aiRecommendations', 'authorUid', 'createdAt'];
+      let requiredFields = ['name', 'packageUnit', 'techniques', 'driveType', 'inspectionPoints', 'authorUid', 'createdAt'];
+      let allowedFields = ['name', 'packageUnit', 'techniques', 'technique', 'driveType', 'inspectionPoints', 'alarms', 'aiAnalysis', 'aiRecommendations', 'authorUid', 'createdAt'];
       return hasRequiredFields(data, requiredFields) &&
              hasOnlyAllowedFields(data, allowedFields) &&
              isValidString(data.name, 1, 200) &&
+             isValidString(data.packageUnit, 1, 200) &&
              isValidTechniquesList(data.techniques) &&
              isValidString(data.driveType, 1, 100) &&
              data.inspectionPoints is list &&

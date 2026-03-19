@@ -12,6 +12,7 @@ export interface EquipmentAlarms {
 export interface Equipment {
   id: string;
   name: string;
+  packageUnit: string;
   techniques: string[];
   driveType: string;
   inspectionPoints: string[];

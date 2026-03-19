@@ -4,7 +4,7 @@ import { db, auth } from '../firebase';
 import { Equipment, OperationType } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
 import { createFirestoreBackup } from '../utils/backup';
-import { Plus, Trash2, Edit2, Loader2, Settings2, Thermometer, Waves, Activity, CheckSquare, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Loader2, Settings2, Thermometer, Waves, Activity, CheckSquare, X, Copy } from 'lucide-react';
 
 export function EquipmentManager() {
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -14,6 +14,7 @@ export function EquipmentManager() {
   
   const initialFormData = {
     name: '',
+    packageUnit: '',
     techniques: { termografia: true, ultrasonido: true, vibraciones: true },
     driveType: 'Bomba',
     customDriveType: '',
@@ -84,6 +85,7 @@ export function EquipmentManager() {
 
     setFormData({
       name: eq.name,
+      packageUnit: eq.packageUnit || '',
       techniques: {
         termografia: eq.techniques?.includes('termografia') || (eq as any).technique === 'termografia',
         ultrasonido: eq.techniques?.includes('ultrasonido') || (eq as any).technique === 'ultrasonido',
@@ -152,6 +154,7 @@ export function EquipmentManager() {
     
     const equipmentData = {
       name: formData.name,
+      packageUnit: formData.packageUnit || '',
       techniques: selectedTechniques,
       driveType: actualDriveType,
       inspectionPoints: points,
@@ -200,6 +203,35 @@ export function EquipmentManager() {
     }
   };
 
+  const handleCopyPackageUnit = async (packageUnitName: string) => {
+    if (packageUnitName === 'Sin Unidad Paquete') return;
+    
+    const newPackageUnitName = prompt(`Ingrese el nombre para la nueva Unidad Paquete (copia de ${packageUnitName}):`, `${packageUnitName} (Copia)`);
+    if (!newPackageUnitName) return;
+
+    if (!auth.currentUser) return;
+
+    const equipmentToCopy = equipmentList.filter(eq => eq.packageUnit === packageUnitName);
+    
+    setSaving(true);
+    try {
+      for (const eq of equipmentToCopy) {
+        const { id, createdAt, ...rest } = eq as any;
+        await addDoc(collection(db, 'equipment'), {
+          ...rest,
+          packageUnit: newPackageUnitName,
+          createdAt: serverTimestamp()
+        });
+      }
+      alert(`Unidad Paquete "${newPackageUnitName}" creada exitosamente con ${equipmentToCopy.length} equipos.`);
+    } catch (error) {
+      console.error("Error copying package unit:", error);
+      alert("Error al copiar la Unidad Paquete.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900"></div></div>;
   }
@@ -227,6 +259,18 @@ export function EquipmentManager() {
               )}
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700">Unidad Paquete</label>
+                <input
+                  required
+                  type="text"
+                  value={formData.packageUnit}
+                  onChange={e => setFormData({ ...formData, packageUnit: e.target.value })}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                  placeholder="Ej. Unidad Paquete 1"
+                />
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-700">Nombre del Equipo</label>
                 <input
@@ -428,52 +472,76 @@ export function EquipmentManager() {
               No hay equipos registrados aún.
             </div>
           ) : (
-            equipmentList.map(eq => (
-              <div key={eq.id} className={`bg-white border ${editingId === eq.id ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-zinc-200'} rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start transition-all`}>
-                <div className="space-y-3 flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="text-lg font-semibold text-zinc-900">{eq.name}</h3>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {(eq.techniques || ((eq as any).technique ? [(eq as any).technique] : [])).map((tech: string, idx: number) => (
-                        <span key={tech || idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 text-xs font-medium capitalize">
-                          {getTechniqueIcon(tech)}
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium capitalize">
-                      {eq.driveType}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Puntos de Inspección</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {eq.inspectionPoints.map((point, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-700">
-                          {point}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+            Object.entries(
+              equipmentList.reduce((acc, eq) => {
+                const group = eq.packageUnit || 'Sin Unidad Paquete';
+                if (!acc[group]) acc[group] = [];
+                acc[group].push(eq);
+                return acc;
+              }, {} as Record<string, Equipment[]>)
+            ).map(([packageUnit, equipments]) => (
+              <div key={packageUnit} className="space-y-4">
+                <div className="flex items-center justify-between bg-zinc-100 px-4 py-2 rounded-xl">
+                  <h2 className="text-md font-semibold text-zinc-800">{packageUnit}</h2>
+                  {packageUnit !== 'Sin Unidad Paquete' && (
+                    <button
+                      onClick={() => handleCopyPackageUnit(packageUnit)}
+                      className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                      title="Copiar Unidad Paquete"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copiar
+                    </button>
+                  )}
                 </div>
-                
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => handleEdit(eq)}
-                    className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    title="Editar equipo"
-                  >
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(eq.id)}
-                    className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar equipo"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
+                {equipments.map(eq => (
+                  <div key={eq.id} className={`bg-white border ${editingId === eq.id ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-zinc-200'} rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start transition-all`}>
+                    <div className="space-y-3 flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-lg font-semibold text-zinc-900">{eq.name}</h3>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {(eq.techniques || ((eq as any).technique ? [(eq as any).technique] : [])).map((tech: string, idx: number) => (
+                            <span key={tech || idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 text-xs font-medium capitalize">
+                              {getTechniqueIcon(tech)}
+                              {tech}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium capitalize">
+                          {eq.driveType}
+                        </span>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Puntos de Inspección</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {eq.inspectionPoints.map((point, idx) => (
+                            <span key={idx} className="px-3 py-1 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-700">
+                              {point}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleEdit(eq)}
+                        className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Editar equipo"
+                      >
+                        <Edit2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(eq.id)}
+                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar equipo"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))
           )}

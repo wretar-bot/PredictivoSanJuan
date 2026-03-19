@@ -100,7 +100,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
       setFormData(prev => ({
         ...prev,
         equipmentId: eq.id,
-        equipmentName: eq.name,
+        equipmentName: eq.packageUnit ? `${eq.packageUnit} - ${eq.name}` : eq.name,
         technique: defaultTechnique,
         measurementPoint: '', // Reset point when equipment changes
         unit: defaultUnit
@@ -283,7 +283,9 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
               >
                 <option value="" disabled>Selecciona un equipo...</option>
                 {equipmentList.map(eq => (
-                  <option key={eq.id} value={eq.id}>{eq.name}</option>
+                  <option key={eq.id} value={eq.id}>
+                    {eq.packageUnit ? `${eq.packageUnit} - ${eq.name}` : eq.name}
+                  </option>
                 ))}
               </select>
             </div>

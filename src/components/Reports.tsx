@@ -244,7 +244,7 @@ export function Reports() {
               <option value="" disabled>Selecciona una opción...</option>
               {reportType === 'om' 
                 ? uniqueOMs.map(om => <option key={om} value={om}>{om}</option>)
-                : equipmentList.map(eq => <option key={eq.id} value={eq.id}>{eq.name} ({eq.techniques?.join(', ') || (eq as any).technique})</option>)
+                : equipmentList.map(eq => <option key={eq.id} value={eq.id}>{eq.packageUnit ? `${eq.packageUnit} - ${eq.name}` : eq.name} ({eq.techniques?.join(', ') || (eq as any).technique})</option>)
               }
             </select>
           </div>
