@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: maintenance_records
+    // Document ID: Auto-generated
+    // Fields:
+    //   - omNumber: string (required, max 100 chars)
+    //   - equipmentName: string (required, max 200 chars)
+    //   - measurementPoint: string (required, max 200 chars)
+    //   - technique: string (required, enum: 'termografia', 'ultrasonido', 'vibraciones')
+    //   - value: number (required)
+    //   - unit: string (required, max 50 chars)
+    //   - notes: string (optional, max 1000 chars)
+    //   - createdAt: timestamp (required, immutable)
+    //   - authorUid: string (required, immutable)
+    //   - authorName: string (optional, max 100 chars)
+    // ===============================================================
+    // Collection: equipment
+    // Document ID: Auto-generated
+    // Fields:
+    //   - name: string (required, max 200 chars)
+    //   - technique: string (required, enum: 'termografia', 'ultrasonido', 'vibraciones')
+    //   - driveType: string (required, max 100 chars)
+    //   - inspectionPoints: list of strings (required, max 50 items)
+    //   - authorUid: string (required, immutable)
+    //   - createdAt: timestamp (required, immutable)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "wretar@gmail.com" ||
+        (exists(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)) &&
+         get(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)).data.role == 'admin')
+      );
+    }
+
+    function isAuthorized() {
+      return isAuthenticated() && (
+        request.auth.token.email == "wretar@gmail.com" ||
+        exists(/databases/$(database)/documents/authorized_users/$(request.auth.token.email))
+      );
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidOptionalString(data, field, minLen, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() >= minLen && data[field].size() <= maxLen);
+    }
+
+    // Domain Validators
+    function isValidMaintenanceRecord(data) {
+      let requiredFields = ['omNumber', 'equipmentName', 'measurementPoint', 'technique', 'value', 'unit', 'createdAt', 'authorUid'];
+      let allowedFields = ['omNumber', 'equipmentId', 'equipmentName', 'measurementPoint', 'technique', 'value', 'unit', 'createdAt', 'authorUid', 'notes', 'authorName'];
+      
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             isValidString(data.omNumber, 1, 100) &&
+             isValidOptionalString(data, 'equipmentId', 1, 100) &&
+             isValidString(data.equipmentName, 1, 200) &&
+             isValidString(data.measurementPoint, 1, 200) &&
+             data.technique in ['termografia', 'ultrasonido', 'vibraciones'] &&
+             data.value is number &&
+             isValidString(data.unit, 1, 50) &&
+             data.createdAt is timestamp &&
+             isValidString(data.authorUid, 1, 100) &&
+             isValidOptionalString(data, 'notes', 0, 1000) &&
+             isValidOptionalString(data, 'authorName', 0, 100);
+    }
+
+    function isValidTechniquesList(techniques) {
+      return techniques is list && 
+             techniques.size() > 0 && 
+             techniques.size() <= 3 &&
+             techniques.hasOnly(['termografia', 'ultrasonido', 'vibraciones']);
+    }
+
+    function isValidSettings(data) {
+      let allowedFields = ['companyName', 'siteName', 'updatedAt'];
+      return hasOnlyAllowedFields(data, allowedFields) &&
+             isValidOptionalString(data, 'companyName', 0, 200) &&
+             isValidOptionalString(data, 'siteName', 0, 200) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidBackup(data) {
+      let requiredFields = ['data', 'type', 'createdAt', 'authorUid'];
+      return hasRequiredFields(data, requiredFields) &&
+             data.data is string &&
+             data.type in ['manual', 'auto-equipment', 'auto-monthly'] &&
+             data.createdAt is timestamp &&
+             isValidString(data.authorUid, 1, 100);
+    }
+
+    function isValidEquipment(data) {
+      let requiredFields = ['name', 'techniques', 'driveType', 'inspectionPoints', 'authorUid', 'createdAt'];
+      let allowedFields = ['name', 'techniques', 'technique', 'driveType', 'inspectionPoints', 'alarms', 'aiAnalysis', 'aiRecommendations', 'authorUid', 'createdAt'];
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             isValidString(data.name, 1, 200) &&
+             isValidTechniquesList(data.techniques) &&
+             isValidString(data.driveType, 1, 100) &&
+             data.inspectionPoints is list &&
+             data.inspectionPoints.size() > 0 &&
+             data.inspectionPoints.size() <= 50 &&
+             (!('alarms' in data) || data.alarms is map) &&
+             isValidOptionalString(data, 'aiAnalysis', 0, 5000) &&
+             isValidOptionalString(data, 'aiRecommendations', 0, 5000) &&
+             data.createdAt is timestamp &&
+             isValidString(data.authorUid, 1, 100);
+    }
+
+    match /authorized_users/{email} {
+      allow read: if isAuthorized();
+      allow write: if isAdmin();
+    }
+
+    match /equipment/{equipmentId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && 
+                    isValidEquipment(request.resource.data);
+      allow update: if isAuthorized() && 
+                    isValidEquipment(request.resource.data) &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthorized();
+    }
+
+    match /maintenance_records/{recordId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && 
+                    isValidMaintenanceRecord(request.resource.data);
+      allow update: if isAuthorized() && 
+                    isValidMaintenanceRecord(request.resource.data) &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthorized();
+    }
+
+    match /settings/{userId} {
+      allow read: if isAuthorized();
+      allow write: if isAuthorized() &&
+                   isValidSettings(request.resource.data);
+    }
+
+    match /backups/{backupId} {
+      allow read, delete: if isAuthorized();
+      allow create: if isAuthorized() && 
+                    isValidBackup(request.resource.data);
+    }
+  }
+}

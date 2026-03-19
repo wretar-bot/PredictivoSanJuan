@@ -1,0 +1,5 @@
+{
+  "name": "Predictive Maintenance ECSJ",
+  "description": "Aplicación para registrar y gestionar valores de mantenimiento predictivo (termografía, ultrasonido, vibraciones) con integración de IA.",
+  "requestFramePermissions": []
+}

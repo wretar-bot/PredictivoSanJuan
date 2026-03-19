@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "905539119668",
+    "project_id": "esentiaenergy-pred-encino",
+    "storage_bucket": "esentiaenergy-pred-encino.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905539119668:android:d3b63105a867e735b87861",
+        "android_client_info": {
+          "package_name": "MntncePred_26.wf.rr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLMDX4EifJyjrBHNUPKgbDXh7jwRM-FIU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "Equipment": {
+      "title": "Equipment",
+      "description": "Registered equipment with its technique and inspection points.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nombre del equipo" },
+        "techniques": { "type": "array", "items": { "type": "string", "enum": ["termografia", "ultrasonido", "vibraciones"] } },
+        "technique": { "type": "string", "enum": ["termografia", "ultrasonido", "vibraciones"], "description": "Legacy technique field" },
+        "driveType": { "type": "string", "description": "Tipo de accionamiento" },
+        "inspectionPoints": { "type": "array", "items": { "type": "string" } },
+        "alarms": { "type": "object", "description": "Configuración de alarmas" },
+        "aiAnalysis": { "type": "string", "description": "Análisis de IA guardado" },
+        "aiRecommendations": { "type": "string", "description": "Recomendaciones de IA guardadas" },
+        "authorUid": { "type": "string", "description": "ID del usuario que creó el equipo" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "techniques", "driveType", "inspectionPoints", "authorUid", "createdAt"]
+    },
+    "MaintenanceRecord": {
+      "title": "Maintenance Record",
+      "description": "A record of a predictive maintenance measurement.",
+      "type": "object",
+      "properties": {
+        "omNumber": { "type": "string", "description": "Orden de Mantenimiento" },
+        "equipmentId": { "type": "string", "description": "ID del equipo" },
+        "equipmentName": { "type": "string", "description": "Nombre de equipo" },
+        "measurementPoint": { "type": "string", "description": "Punto de medición" },
+        "technique": { "type": "string", "enum": ["termografia", "ultrasonido", "vibraciones"] },
+        "value": { "type": "number", "description": "Valor medido" },
+        "unit": { "type": "string", "description": "Unidad de medida" },
+        "notes": { "type": "string", "description": "Notas adicionales" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorUid": { "type": "string", "description": "ID del usuario que creó el registro" },
+        "authorName": { "type": "string", "description": "Nombre del usuario" }
+      },
+      "required": ["omNumber", "equipmentName", "measurementPoint", "technique", "value", "unit", "createdAt", "authorUid"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "User settings like company and site name.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "siteName": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid"]
+    },
+    "Backup": {
+      "title": "Backup",
+      "description": "Database backups.",
+      "type": "object",
+      "properties": {
+        "data": { "type": "string" },
+        "type": { "type": "string", "enum": ["manual", "auto-equipment", "auto-monthly"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorUid": { "type": "string" }
+      },
+      "required": ["data", "type", "createdAt", "authorUid"]
+    }
+  },
+  "firestore": {
+    "equipment/{equipmentId}": {
+      "schema": { "$ref": "#/entities/Equipment" },
+      "description": "Stores registered equipment."
+    },
+    "maintenance_records/{recordId}": {
+      "schema": { "$ref": "#/entities/MaintenanceRecord" },
+      "description": "Stores all maintenance records."
+    },
+    "settings/{userId}": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "User settings."
+    },
+    "backups/{backupId}": {
+      "schema": { "$ref": "#/entities/Backup" },
+      "description": "Database backups."
+    }
+  }
+}
