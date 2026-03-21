@@ -22,6 +22,7 @@ export function Reports() {
   const [reportData, setReportData] = useState<any>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [companyInfo, setCompanyInfo] = useState({ name: '', site: '' });
+  const [reportNotes, setReportNotes] = useState<string>('');
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -279,6 +280,16 @@ export function Reports() {
             )}
           </div>
         </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-700">Notas del Reporte (Opcional)</label>
+          <textarea
+            value={reportNotes}
+            onChange={(e) => setReportNotes(e.target.value)}
+            placeholder="Agrega comentarios o conclusiones generales que aparecerán en el encabezado del reporte..."
+            className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all resize-y min-h-[80px]"
+          />
+        </div>
       </div>
 
       {/* Report View - Styled for print */}
@@ -302,6 +313,14 @@ export function Reports() {
               <p className="text-sm text-zinc-500">Reporte de Análisis Predictivo</p>
             </div>
           </div>
+
+          {/* Report Notes */}
+          {reportNotes && (
+            <div className="mb-8 p-6 bg-zinc-50 rounded-2xl border border-zinc-200 print:bg-transparent print:border-zinc-300">
+              <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-wider mb-2">Notas del Reporte</h3>
+              <p className="text-zinc-700 whitespace-pre-wrap">{reportNotes}</p>
+            </div>
+          )}
 
           {/* AI Analysis Section */}
           <div className="mb-10 bg-zinc-50 border border-zinc-200 rounded-2xl p-6 print:bg-transparent print:border-zinc-300 print:break-inside-avoid">
