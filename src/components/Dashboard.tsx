@@ -169,6 +169,40 @@ export function Dashboard() {
     return 'normal';
   };
 
+  const equipmentStatusCounts = { danger: 0, warning: 0, normal: 0 };
+  const totalEquipments = Object.keys(equipments).length;
+  
+  Object.values(equipments).forEach(eq => {
+    const eqRecords = records.filter(r => r.equipmentId === eq.id);
+    if (eqRecords.length === 0) {
+      equipmentStatusCounts.normal++;
+      return;
+    }
+
+    const latestRecords: Record<string, MaintenanceRecord> = {};
+    eqRecords.forEach(r => {
+      const key = `${r.technique}-${r.measurementPoint}`;
+      const rTime = r.createdAt?.toMillis ? r.createdAt.toMillis() : 0;
+      const lTime = latestRecords[key]?.createdAt?.toMillis ? latestRecords[key].createdAt.toMillis() : 0;
+      if (!latestRecords[key] || rTime > lTime) {
+        latestRecords[key] = r;
+      }
+    });
+
+    let status = 'normal';
+    for (const r of Object.values(latestRecords)) {
+      const s = getAlarmStatus(r);
+      if (s === 'danger') {
+        status = 'danger';
+        break;
+      }
+      if (s === 'warning') {
+        status = 'warning';
+      }
+    }
+    equipmentStatusCounts[status as keyof typeof equipmentStatusCounts]++;
+  });
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900"></div></div>;
   }
@@ -227,6 +261,26 @@ export function Dashboard() {
               <option value="vibraciones">Vibraciones</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      {/* Resumen de Equipos */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm flex flex-col justify-center items-center">
+          <p className="text-sm font-medium text-zinc-500">Total Equipos</p>
+          <p className="text-3xl font-bold text-zinc-900 mt-1">{totalEquipments}</p>
+        </div>
+        <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm flex flex-col justify-center items-center">
+          <p className="text-sm font-medium text-emerald-700">Normal</p>
+          <p className="text-3xl font-bold text-emerald-600 mt-1">{equipmentStatusCounts.normal}</p>
+        </div>
+        <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 shadow-sm flex flex-col justify-center items-center">
+          <p className="text-sm font-medium text-yellow-700">Advertencia</p>
+          <p className="text-3xl font-bold text-yellow-600 mt-1">{equipmentStatusCounts.warning}</p>
+        </div>
+        <div className="bg-red-50 p-4 rounded-2xl border border-red-100 shadow-sm flex flex-col justify-center items-center">
+          <p className="text-sm font-medium text-red-700">Peligro</p>
+          <p className="text-3xl font-bold text-red-600 mt-1">{equipmentStatusCounts.danger}</p>
         </div>
       </div>
 

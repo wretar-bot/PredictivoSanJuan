@@ -98,6 +98,41 @@ export const clearDatabase = async () => {
   await commit();
 };
 
+export const exportEquipmentCSV = async () => {
+  if (!auth.currentUser) return;
+  
+  const equipmentSnap = await getDocs(query(collection(db, 'equipment')));
+  
+  const equipmentData = equipmentSnap.docs.map(d => {
+    const data = d.data({ serverTimestamps: 'estimate' });
+    return {
+      id: d.id,
+      ...data,
+      techniques: JSON.stringify(data.techniques || []),
+      inspectionPoints: JSON.stringify(data.inspectionPoints || []),
+      alarms: JSON.stringify(data.alarms || {}),
+      createdAt: data.createdAt?.toMillis() || '',
+    };
+  });
+
+  const downloadCSV = (csv: string, filename: string) => {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (equipmentData.length > 0) {
+    const eqCsv = Papa.unparse(equipmentData);
+    downloadCSV(eqCsv, `equipos_${new Date().toISOString().split('T')[0]}.csv`);
+  } else {
+    alert('No hay equipos para exportar.');
+  }
+};
+
 export const exportDatabaseCSV = async () => {
   if (!auth.currentUser) return;
   

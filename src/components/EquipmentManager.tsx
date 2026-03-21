@@ -3,8 +3,8 @@ import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc
 import { db, auth } from '../firebase';
 import { Equipment, OperationType } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { createFirestoreBackup } from '../utils/backup';
-import { Plus, Trash2, Edit2, Loader2, Settings2, Thermometer, Waves, Activity, CheckSquare, X, Copy } from 'lucide-react';
+import { createFirestoreBackup, exportEquipmentCSV, importCSV } from '../utils/backup';
+import { Plus, Trash2, Edit2, Loader2, Settings2, Thermometer, Waves, Activity, CheckSquare, X, Copy, Download, Upload } from 'lucide-react';
 
 export function EquipmentManager() {
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -263,15 +263,77 @@ export function EquipmentManager() {
     }
   };
 
+  const handleExportCSV = async () => {
+    setSaving(true);
+    try {
+      await exportEquipmentCSV();
+    } catch (error) {
+      console.error(error);
+      alert('Error al exportar los equipos.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm('¿Estás seguro de importar este archivo CSV? Los equipos se añadirán a la base de datos actual.')) {
+      e.target.value = '';
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await importCSV(file);
+      alert('Equipos importados correctamente.');
+    } catch (error) {
+      console.error(error);
+      alert('Error al importar el archivo CSV. Verifica el formato.');
+    } finally {
+      setSaving(false);
+      e.target.value = '';
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900"></div></div>;
   }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Gestión de Equipos</h1>
-        <p className="text-sm text-zinc-500 mt-1">Da de alta los equipos, sus técnicas y los puntos a inspeccionar.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Gestión de Equipos</h1>
+          <p className="text-sm text-zinc-500 mt-1">Da de alta los equipos, sus técnicas y los puntos a inspeccionar.</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportCSV}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 transition-all"
+          >
+            <Download className="w-4 h-4" />
+            Exportar CSV
+          </button>
+          <div className="relative">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              disabled={saving}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            />
+            <button
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 transition-all"
+            >
+              <Upload className="w-4 h-4" />
+              Importar CSV
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
