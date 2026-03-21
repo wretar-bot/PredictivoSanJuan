@@ -10,7 +10,7 @@ import { DatabaseManager } from './components/DatabaseManager';
 import { UserManagement } from './components/UserManagement';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { checkAndCreateMonthlyBackup } from './utils/backup';
-import { Activity, PlusCircle, LayoutDashboard, Bot, LogOut, Menu, X, Settings2, FileText, Database, WifiOff, Wifi, Users } from 'lucide-react';
+import { Activity, PlusCircle, LayoutDashboard, Bot, LogOut, Menu, X, Settings2, FileText, Database, WifiOff, Wifi, Users, Pin, PinOff } from 'lucide-react';
 import { EsentiaLogo } from './components/EsentiaLogo';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
@@ -25,6 +25,10 @@ function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [siteName, setSiteName] = useState('');
+  const [isSidebarPinned, setIsSidebarPinned] = useState(true);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+
+  const isExpanded = isSidebarPinned || isSidebarHovered;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -139,57 +143,64 @@ function AppContent() {
     );
   }
 
-  const NavItems = () => (
+  const NavItems = ({ isExpanded = true }: { isExpanded?: boolean }) => (
     <>
       <button
         onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'dashboard' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'dashboard' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        title={!isExpanded ? "Dashboard" : undefined}
       >
-        <LayoutDashboard className="w-4 h-4" />
-        Dashboard
+        <LayoutDashboard className="w-5 h-5 shrink-0" />
+        {isExpanded && <span className="truncate">Dashboard</span>}
       </button>
       <button
         onClick={() => { setActiveTab('add'); setIsMobileMenuOpen(false); }}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'add' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'add' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        title={!isExpanded ? "Nuevo Registro" : undefined}
       >
-        <PlusCircle className="w-4 h-4" />
-        Nuevo Registro
+        <PlusCircle className="w-5 h-5 shrink-0" />
+        {isExpanded && <span className="truncate">Nuevo Registro</span>}
       </button>
       <button
         onClick={() => { setActiveTab('equipment'); setIsMobileMenuOpen(false); }}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'equipment' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'equipment' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        title={!isExpanded ? "Equipos" : undefined}
       >
-        <Settings2 className="w-4 h-4" />
-        Equipos
+        <Settings2 className="w-5 h-5 shrink-0" />
+        {isExpanded && <span className="truncate">Equipos</span>}
       </button>
       <button
         onClick={() => { setActiveTab('reports'); setIsMobileMenuOpen(false); }}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'reports' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'reports' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        title={!isExpanded ? "Reportes" : undefined}
       >
-        <FileText className="w-4 h-4" />
-        Reportes
+        <FileText className="w-5 h-5 shrink-0" />
+        {isExpanded && <span className="truncate">Reportes</span>}
       </button>
       <button
         onClick={() => { setActiveTab('ai'); setIsMobileMenuOpen(false); }}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'ai' ? 'bg-indigo-50 text-indigo-700' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'ai' ? 'bg-indigo-50 text-indigo-700' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        title={!isExpanded ? "Asistente IA" : undefined}
       >
-        <Bot className="w-4 h-4" />
-        Asistente IA
+        <Bot className="w-5 h-5 shrink-0" />
+        {isExpanded && <span className="truncate">Asistente IA</span>}
       </button>
       <button
         onClick={() => { setActiveTab('database'); setIsMobileMenuOpen(false); }}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'database' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'database' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+        title={!isExpanded ? "Base de Datos" : undefined}
       >
-        <Database className="w-4 h-4" />
-        Base de Datos
+        <Database className="w-5 h-5 shrink-0" />
+        {isExpanded && <span className="truncate">Base de Datos</span>}
       </button>
       {isAdmin && (
         <button
           onClick={() => { setActiveTab('users'); setIsMobileMenuOpen(false); }}
-          className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'users' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+          className={`flex items-center ${isExpanded ? 'gap-3 px-4' : 'justify-center px-0'} py-2.5 rounded-xl text-sm font-medium transition-colors w-full ${activeTab === 'users' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'}`}
+          title={!isExpanded ? "Usuarios" : undefined}
         >
-          <Users className="w-4 h-4" />
-          Usuarios
+          <Users className="w-5 h-5 shrink-0" />
+          {isExpanded && <span className="truncate">Usuarios</span>}
         </button>
       )}
     </>
@@ -248,39 +259,68 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col bg-white border-r border-zinc-200 h-screen sticky top-0">
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col">
-              <div className="w-32 h-12 flex items-center justify-center rounded-lg overflow-hidden shadow-sm">
-                <EsentiaLogo />
+      <aside 
+        className={`hidden md:flex flex-col bg-white border-r border-zinc-200 h-screen sticky top-0 transition-all duration-300 z-30 ${isExpanded ? 'w-64' : 'w-20'}`}
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+      >
+        <div className={`p-6 flex items-center ${isExpanded ? 'justify-between' : 'justify-center flex-col gap-4'}`}>
+          {isExpanded ? (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <div className="w-32 h-12 flex items-center justify-center rounded-lg overflow-hidden shadow-sm">
+                    <EsentiaLogo />
+                  </div>
+                  {siteName && <span className="text-xs text-zinc-500 font-medium mt-1">{siteName}</span>}
+                </div>
               </div>
-              {siteName && <span className="text-xs text-zinc-500 font-medium mt-1">{siteName}</span>}
-            </div>
-          </div>
-          <div className="flex items-center" title={isOnline ? "Conectado" : "Sin conexión"}>
-            {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-red-500" />}
-          </div>
+              <div className="flex items-center gap-2">
+                <div title={isOnline ? "Conectado" : "Sin conexión"}>
+                  {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-red-500" />}
+                </div>
+                <button 
+                  onClick={() => setIsSidebarPinned(!isSidebarPinned)}
+                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title={isSidebarPinned ? "Desfijar menú" : "Fijar menú"}
+                >
+                  {isSidebarPinned ? <Pin className="w-4 h-4" /> : <PinOff className="w-4 h-4" />}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-10 h-10 flex items-center justify-center rounded-lg overflow-hidden shadow-sm bg-zinc-900 text-white font-bold text-xl">
+                E
+              </div>
+              <div title={isOnline ? "Conectado" : "Sin conexión"}>
+                {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-red-500" />}
+              </div>
+            </>
+          )}
         </div>
         
-        <nav className="flex-1 px-4 space-y-1.5 mt-4">
-          <NavItems />
+        <nav className={`flex-1 ${isExpanded ? 'px-4' : 'px-3'} space-y-1.5 mt-4`}>
+          <NavItems isExpanded={isExpanded} />
         </nav>
 
         <div className="p-4 border-t border-zinc-100">
-          <div className="flex items-center gap-3 px-2 py-2 mb-2">
+          <div className={`flex items-center ${isExpanded ? 'gap-3 px-2' : 'justify-center'} py-2 mb-2`}>
             <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`} alt="Avatar" className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm" referrerPolicy="no-referrer" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-zinc-900 truncate">{user.displayName}</p>
-              <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-            </div>
+            {isExpanded && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-zinc-900 truncate">{user.displayName}</p>
+                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+              </div>
+            )}
           </div>
           <button
             onClick={logOut}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+            className={`flex items-center justify-center gap-2 w-full ${isExpanded ? 'px-4' : 'px-0'} py-2 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors`}
+            title={!isExpanded ? "Cerrar Sesión" : undefined}
           >
-            <LogOut className="w-4 h-4" />
-            Cerrar Sesión
+            <LogOut className="w-5 h-5 shrink-0" />
+            {isExpanded && <span>Cerrar Sesión</span>}
           </button>
         </div>
       </aside>

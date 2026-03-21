@@ -3,7 +3,7 @@ import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/fire
 import { db, auth } from '../firebase';
 import { MaintenanceRecord, Equipment, OperationType } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { FileText, Printer, Loader2, AlertCircle, Activity, Thermometer, Waves, Download, Save } from 'lucide-react';
+import { FileText, Printer, Loader2, AlertCircle, Activity, Thermometer, Waves, Download, Save, X, Upload, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import ReactMarkdown from 'react-markdown';
@@ -23,6 +23,29 @@ export function Reports() {
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [companyInfo, setCompanyInfo] = useState({ name: '', site: '' });
   const [reportNotes, setReportNotes] = useState<string>('');
+  const [reportPhotos, setReportPhotos] = useState<string[]>([]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setReportPhotos(prev => [...prev, event.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removePhoto = (index: number) => {
+    setReportPhotos(prev => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -290,6 +313,28 @@ export function Reports() {
             className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all resize-y min-h-[80px]"
           />
         </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-700">Fotos del Reporte (Opcional)</label>
+          <div className="flex flex-wrap gap-4">
+            {reportPhotos.map((photo, index) => (
+              <div key={index} className="relative w-24 h-24 rounded-xl border border-zinc-200 overflow-hidden group">
+                <img src={photo} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => removePhoto(index)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            <label className="w-24 h-24 flex flex-col items-center justify-center gap-2 bg-zinc-50 border border-zinc-200 border-dashed rounded-xl cursor-pointer hover:bg-zinc-100 transition-colors">
+              <Upload className="w-5 h-5 text-zinc-400" />
+              <span className="text-xs text-zinc-500 font-medium">Subir</span>
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* Report View - Styled for print */}
@@ -435,6 +480,23 @@ export function Reports() {
               </div>
             ))}
           </div>
+
+          {/* Photos Section */}
+          {reportPhotos.length > 0 && (
+            <div className="mt-12 bg-zinc-50 border border-zinc-200 rounded-2xl p-6 print:bg-transparent print:border-zinc-300 print:break-inside-avoid">
+              <div className="flex items-center gap-2 mb-6">
+                <Camera className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-xl font-bold text-zinc-900">Evidencia Fotográfica</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                {reportPhotos.map((photo, index) => (
+                  <div key={index} className="rounded-xl overflow-hidden border border-zinc-200 print:border-zinc-300 bg-white">
+                    <img src={photo} alt={`Evidencia ${index + 1}`} className="w-full h-auto object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
