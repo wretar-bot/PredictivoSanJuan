@@ -152,6 +152,7 @@ export function Dashboard() {
       case 'termografia': return <Thermometer className="w-4 h-4 text-orange-500" />;
       case 'ultrasonido': return <Waves className="w-4 h-4 text-blue-500" />;
       case 'vibraciones': return <Activity className="w-4 h-4 text-emerald-500" />;
+      case 'lubricacion': return <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"><span className="text-[10px] text-white font-bold">L</span></div>;
       default: return null;
     }
   };
@@ -259,6 +260,7 @@ export function Dashboard() {
               <option value="termografia">Termografía</option>
               <option value="ultrasonido">Ultrasonido</option>
               <option value="vibraciones">Vibraciones</option>
+              <option value="lubricacion">Lubricación</option>
             </select>
           </div>
         </div>
@@ -397,7 +399,7 @@ export function Dashboard() {
                                   {(() => {
                                     const eqId = pointRecords[0]?.equipmentId;
                                     const eq = eqId ? equipments[eqId] : null;
-                                    const techAlarms = eq?.alarms?.[tech as 'termografia' | 'vibraciones' | 'ultrasonido'];
+                                    const techAlarms = eq?.alarms?.[tech as 'termografia' | 'vibraciones' | 'ultrasonido' | 'lubricacion'];
                                     
                                     if (!techAlarms) return null;
                                     
@@ -429,6 +431,12 @@ export function Dashboard() {
                                   <th className="px-4 py-3">Fecha</th>
                                   <th className="px-4 py-3">OM</th>
                                   <th className="px-4 py-3">Valor</th>
+                                  {tech === 'lubricacion' && (
+                                    <>
+                                      <th className="px-4 py-3">Tipo de Grasa</th>
+                                      <th className="px-4 py-3">Horas Op.</th>
+                                    </>
+                                  )}
                                   <th className="px-4 py-3">Notas</th>
                                   <th className="px-4 py-3 text-right">Acciones</th>
                                 </tr>
@@ -446,17 +454,23 @@ export function Dashboard() {
                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md ${
                                           status === 'danger' ? 'bg-red-100 text-red-700' :
                                           status === 'warning' ? 'bg-orange-100 text-orange-700' :
-                                          'text-zinc-900'
+                                          'bg-emerald-100 text-emerald-700'
                                         }`}>
-                                          {record.value} <span className={`text-xs ml-1 ${status === 'normal' ? 'text-zinc-500' : 'opacity-80'}`}>{record.unit}</span>
+                                          {record.value} {record.unit}
                                         </span>
                                       </td>
-                                      <td className="px-4 py-3 text-zinc-500 truncate max-w-[200px]" title={record.notes}>
+                                      {tech === 'lubricacion' && (
+                                        <>
+                                          <td className="px-4 py-3 text-zinc-600">{record.greaseType || '-'}</td>
+                                          <td className="px-4 py-3 text-zinc-600">{record.operatingHours || '-'}</td>
+                                        </>
+                                      )}
+                                      <td className="px-4 py-3 text-zinc-500 max-w-xs truncate" title={record.notes}>
                                         {record.notes || '-'}
                                       </td>
                                       <td className="px-4 py-3 text-right">
-                                        <button 
-                                          onClick={() => handleDelete(record.id)} 
+                                        <button
+                                          onClick={() => handleDelete(record.id)}
                                           className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                                           title="Eliminar registro"
                                         >

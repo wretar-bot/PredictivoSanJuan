@@ -218,6 +218,7 @@ export function Reports() {
       case 'termografia': return <Thermometer className="w-4 h-4 text-orange-500" />;
       case 'ultrasonido': return <Waves className="w-4 h-4 text-blue-500" />;
       case 'vibraciones': return <Activity className="w-4 h-4 text-emerald-500" />;
+      case 'lubricacion': return <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"><span className="text-[10px] text-white font-bold">L</span></div>;
       default: return null;
     }
   };

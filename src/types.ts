@@ -23,6 +23,7 @@ export interface Equipment {
   aiRecommendations?: string;
   authorUid: string;
   createdAt: any;
+  operatingHours?: number;
 }
 
 export interface MaintenanceRecord {
@@ -31,13 +32,15 @@ export interface MaintenanceRecord {
   equipmentId?: string;
   equipmentName: string;
   measurementPoint: string;
-  technique: 'termografia' | 'ultrasonido' | 'vibraciones';
+  technique: 'termografia' | 'ultrasonido' | 'vibraciones' | 'lubricacion';
   value: number;
   unit: string;
   notes?: string;
   createdAt: any; // Firestore Timestamp
   authorUid: string;
   authorName?: string;
+  greaseType?: string;
+  operatingHours?: number;
 }
 
 export enum OperationType {

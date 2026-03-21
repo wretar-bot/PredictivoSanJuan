@@ -15,7 +15,7 @@ export function generateRuleBasedAnalysis(equipment: Equipment, records: Mainten
 
   techniques.forEach(tech => {
     const techRecords = records.filter(r => r.technique === tech);
-    const techAlarms = equipment.alarms?.[tech as 'termografia' | 'vibraciones' | 'ultrasonido'];
+    const techAlarms = equipment.alarms?.[tech as 'termografia' | 'vibraciones' | 'ultrasonido' | 'lubricacion'];
     
     // Find the latest record for each measurement point
     const latestRecordsByPoint: Record<string, MaintenanceRecord> = {};
@@ -70,6 +70,12 @@ export function generateRuleBasedAnalysis(equipment: Equipment, records: Mainten
         goodPractices = 'Detección temprana de fallas en rodamientos (fricción), problemas de lubricación, detección de fugas de aire/gas, inspección de trampas de vapor y arcos eléctricos.';
         specificRecommendations = 'Aplicar plan de lubricación acústica (engrase basado en ultrasonido), revisar sellos y empaquetaduras, inspeccionar válvulas o trampas de vapor si aplica.';
         break;
+      case 'lubricacion':
+        techName = 'Lubricación';
+        norm = 'ISO 18436-4 (Análisis de lubricantes) y buenas prácticas de ICML';
+        goodPractices = 'Aplicación de la cantidad correcta de grasa en el intervalo adecuado, evitando la sobrelubricación y la mezcla de grasas incompatibles.';
+        specificRecommendations = 'Verificar compatibilidad de grasas, respetar los intervalos de relubricación basados en horas de operación, y asegurar limpieza en los puntos de engrase.';
+        break;
       default:
         techName = tech;
         norm = 'Estándares generales de mantenimiento industrial';
@@ -82,20 +88,31 @@ export function generateRuleBasedAnalysis(equipment: Equipment, records: Mainten
     analysisMarkdown += `**Normativa de referencia:** ${norm}\n\n`;
     analysisMarkdown += `**Buenas prácticas:** ${goodPractices}\n\n`;
     
-    analysisMarkdown += `**Estado de Condición:**\n`;
-    if (maxStatus === 'danger') {
-      analysisMarkdown += `- 🔴 **Rojo (Alarma crítica):** Se han detectado valores que superan el umbral de Peligro (${techAlarms?.danger}).\n`;
-      analysisMarkdown += `  - Puntos críticos: ${pointsInDanger.join(', ')}\n`;
-    } else if (maxStatus === 'warning') {
-      analysisMarkdown += `- 🟡 **Ámbar (Alarma):** Se han detectado valores que superan el umbral de Alarma (${techAlarms?.warning}), pero están por debajo del nivel de Peligro.\n`;
-      analysisMarkdown += `  - Puntos en advertencia: ${pointsInWarning.join(', ')}\n`;
+    if (tech.toLowerCase() === 'lubricacion') {
+      analysisMarkdown += `**Puntos Lubricados:**\n`;
+      Object.values(latestRecordsByPoint).forEach(r => {
+        analysisMarkdown += `- ${r.measurementPoint}: ${r.value} ${r.unit} de grasa ${r.greaseType || 'N/A'} (a las ${r.operatingHours || 0} horas de operación)\n`;
+      });
     } else {
-      analysisMarkdown += `- 🟢 **Verde (Ok):** Todos los valores medidos se encuentran dentro de los parámetros normales de operación (por debajo de ${techAlarms?.warning || 'los umbrales de alarma'}).\n`;
+      analysisMarkdown += `**Estado de Condición:**\n`;
+      if (maxStatus === 'danger') {
+        analysisMarkdown += `- 🔴 **Rojo (Alarma crítica):** Se han detectado valores que superan el umbral de Peligro (${techAlarms?.danger}).\n`;
+        analysisMarkdown += `  - Puntos críticos: ${pointsInDanger.join(', ')}\n`;
+      } else if (maxStatus === 'warning') {
+        analysisMarkdown += `- 🟡 **Ámbar (Alarma):** Se han detectado valores que superan el umbral de Alarma (${techAlarms?.warning}), pero están por debajo del nivel de Peligro.\n`;
+        analysisMarkdown += `  - Puntos en advertencia: ${pointsInWarning.join(', ')}\n`;
+      } else {
+        analysisMarkdown += `- 🟢 **Verde (Ok):** Todos los valores medidos se encuentran dentro de los parámetros normales de operación (por debajo de ${techAlarms?.warning || 'los umbrales de alarma'}).\n`;
+      }
     }
     analysisMarkdown += `\n`;
 
     recommendationsMarkdown += `#### ${techName}\n`;
-    if (maxStatus === 'danger') {
+    if (tech.toLowerCase() === 'lubricacion') {
+      recommendationsMarkdown += `**Recomendaciones de Lubricación:**\n`;
+      recommendationsMarkdown += `- ${specificRecommendations}\n`;
+      recommendationsMarkdown += `- Monitorear la temperatura y vibración de los rodamientos después de la lubricación para asegurar que no haya sobrelubricación.\n`;
+    } else if (maxStatus === 'danger') {
       recommendationsMarkdown += `**¡ACCIÓN INMEDIATA REQUERIDA!**\n`;
       recommendationsMarkdown += `- Programar intervención correctiva a la brevedad para los puntos críticos.\n`;
       recommendationsMarkdown += `- ${specificRecommendations}\n`;

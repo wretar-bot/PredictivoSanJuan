@@ -21,7 +21,9 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     technique: 'termografia',
     value: '',
     unit: '',
-    notes: ''
+    notes: '',
+    greaseType: '',
+    operatingHours: ''
   });
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         case 'termografia': defaultUnit = '°C'; break;
         case 'vibraciones': defaultUnit = 'mm/s'; break;
         case 'ultrasonido': defaultUnit = 'dB'; break;
+        case 'lubricacion': defaultUnit = 'g'; break;
       }
 
       setFormData(prev => ({
@@ -124,6 +127,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
       case 'termografia': newUnit = '°C'; break;
       case 'vibraciones': newUnit = 'mm/s'; break;
       case 'ultrasonido': newUnit = 'dB'; break;
+      case 'lubricacion': newUnit = 'g'; break;
     }
     setFormData(prev => {
       let newMeasurementPoint = prev.measurementPoint;
@@ -153,7 +157,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
 
     setLoading(true);
     
-    addDoc(collection(db, 'maintenance_records'), {
+    const recordData: any = {
       omNumber: formData.omNumber,
       equipmentId: formData.equipmentId,
       equipmentName: formData.equipmentName,
@@ -165,12 +169,32 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
       createdAt: serverTimestamp(),
       authorUid: auth.currentUser.uid,
       authorName: auth.currentUser.displayName || 'Usuario'
-    }).then(() => {
+    };
+
+    if (formData.technique === 'lubricacion') {
+      recordData.greaseType = formData.greaseType;
+      recordData.operatingHours = Number(formData.operatingHours);
+    }
+
+    try {
+      await addDoc(collection(db, 'maintenance_records'), recordData);
+      
+      if (formData.technique === 'lubricacion' && selectedEquipment && formData.equipmentId) {
+        const newHours = Number(formData.operatingHours);
+        if (!selectedEquipment.operatingHours || newHours > selectedEquipment.operatingHours) {
+          await updateDoc(doc(db, 'equipment', formData.equipmentId), {
+            operatingHours: newHours
+          });
+        }
+      }
+
       setFormData(prev => ({
         ...prev,
         measurementPoint: '',
         value: '',
-        notes: ''
+        notes: '',
+        greaseType: '',
+        operatingHours: ''
       }));
       
       setLoading(false);
@@ -178,11 +202,11 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
       setTimeout(() => setShowSuccess(false), 3000);
       
       if (onSuccess) onSuccess();
-    }).catch(error => {
+    } catch (error) {
       console.error("Error adding record:", error);
       alert("Error al guardar el registro en la nube. El registro se revertirá.");
       setLoading(false);
-    });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -366,6 +390,36 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 />
               </div>
             </div>
+
+            {formData.technique === 'lubricacion' && (
+              <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-700">Tipo de Grasa</label>
+                  <input
+                    required
+                    type="text"
+                    name="greaseType"
+                    value={formData.greaseType}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                    placeholder="Ej. Grasa de Litio EP2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-700">Horas de Operación</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    name="operatingHours"
+                    value={formData.operatingHours}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all font-mono"
+                    placeholder="Ej. 1500"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium text-zinc-700">Notas Adicionales (Opcional)</label>

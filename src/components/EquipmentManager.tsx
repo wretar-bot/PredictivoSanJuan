@@ -17,7 +17,7 @@ export function EquipmentManager() {
     packageUnit: '',
     machineSize: 'medium' as 'small' | 'medium' | 'large',
     foundationType: 'rigid' as 'rigid' | 'flexible',
-    techniques: { termografia: true, ultrasonido: true, vibraciones: true },
+    techniques: { termografia: true, ultrasonido: true, vibraciones: true, lubricacion: true },
     driveType: 'Bomba',
     customDriveType: '',
     motorPoints: { libre: true, cople: true, cuerpo: true },
@@ -27,7 +27,8 @@ export function EquipmentManager() {
       termografia: { warning: 65, danger: 85 },
       vibraciones: { warning: 4.5, danger: 7.1 },
       ultrasonido: { warning: 35, danger: 45 }
-    }
+    },
+    operatingHours: 0
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -93,7 +94,8 @@ export function EquipmentManager() {
       techniques: {
         termografia: eq.techniques?.includes('termografia') || (eq as any).technique === 'termografia',
         ultrasonido: eq.techniques?.includes('ultrasonido') || (eq as any).technique === 'ultrasonido',
-        vibraciones: eq.techniques?.includes('vibraciones') || (eq as any).technique === 'vibraciones'
+        vibraciones: eq.techniques?.includes('vibraciones') || (eq as any).technique === 'vibraciones',
+        lubricacion: eq.techniques?.includes('lubricacion') || (eq as any).technique === 'lubricacion'
       },
       driveType: isCustomDrive ? 'Otro' : eq.driveType,
       customDriveType: isCustomDrive ? eq.driveType : '',
@@ -104,7 +106,8 @@ export function EquipmentManager() {
         termografia: eq.alarms?.termografia || initialFormData.alarms.termografia,
         vibraciones: eq.alarms?.vibraciones || initialFormData.alarms.vibraciones,
         ultrasonido: eq.alarms?.ultrasonido || initialFormData.alarms.ultrasonido
-      }
+      },
+      operatingHours: eq.operatingHours || 0
     });
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -191,6 +194,7 @@ export function EquipmentManager() {
       inspectionPoints: points,
       alarms: formData.alarms,
       authorUid: auth.currentUser.uid,
+      operatingHours: formData.operatingHours,
     };
 
     if (editingId) {
@@ -230,6 +234,7 @@ export function EquipmentManager() {
       case 'termografia': return <Thermometer className="w-4 h-4 text-orange-500" />;
       case 'ultrasonido': return <Waves className="w-4 h-4 text-blue-500" />;
       case 'vibraciones': return <Activity className="w-4 h-4 text-emerald-500" />;
+      case 'lubricacion': return <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"><span className="text-[10px] text-white font-bold">L</span></div>;
       default: return null;
     }
   };
@@ -376,6 +381,18 @@ export function EquipmentManager() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700">Horas de Operación</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.operatingHours}
+                  onChange={e => setFormData({ ...formData, operatingHours: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                  placeholder="Ej. 1500"
+                />
+              </div>
+
               <div className="space-y-3">
                 <label className="text-sm font-medium text-zinc-700">Tamaño / Potencia (ISO 10816)</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -431,6 +448,10 @@ export function EquipmentManager() {
                   <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
                     <input type="checkbox" checked={formData.techniques.ultrasonido} onChange={e => setFormData({...formData, techniques: {...formData.techniques, ultrasonido: e.target.checked}})} className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
                     Ultrasonido
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+                    <input type="checkbox" checked={formData.techniques.lubricacion} onChange={e => setFormData({...formData, techniques: {...formData.techniques, lubricacion: e.target.checked}})} className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
+                    Lubricación
                   </label>
                 </div>
               </div>
@@ -643,6 +664,11 @@ export function EquipmentManager() {
                         {eq.foundationType && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-medium capitalize">
                             Base {eq.foundationType === 'rigid' ? 'Rígida' : 'Flexible'}
+                          </span>
+                        )}
+                        {eq.operatingHours !== undefined && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium capitalize">
+                            {eq.operatingHours} hrs
                           </span>
                         )}
                       </div>
