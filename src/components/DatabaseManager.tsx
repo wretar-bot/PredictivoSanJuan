@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, orderBy, onSnapshot, deleteDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { createFirestoreBackup, clearDatabase, restoreBackup, generateBackupData } from '../utils/backup';
+import { createFirestoreBackup, clearDatabase, restoreBackup, generateBackupData, exportDatabaseCSV, importCSV } from '../utils/backup';
 import { Save, Download, Upload, Trash2, Database, AlertTriangle, Loader2 } from 'lucide-react';
 
 export function DatabaseManager() {
@@ -124,6 +124,40 @@ export function DatabaseManager() {
     }
   };
 
+  const handleExportCSV = async () => {
+    setProcessing(true);
+    try {
+      await exportDatabaseCSV();
+    } catch (e) {
+      console.error(e);
+      alert('Error al exportar CSV.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm('¿Estás seguro de importar este archivo CSV? Los registros se añadirán a la base de datos actual.')) {
+      e.target.value = '';
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      await importCSV(file);
+      alert('Datos CSV importados correctamente.');
+    } catch (error) {
+      console.error(error);
+      alert('Error al importar el archivo CSV. Verifica el formato.');
+    } finally {
+      setProcessing(false);
+      e.target.value = '';
+    }
+  };
+
   const handleCreateCloudBackup = async () => {
     setProcessing(true);
     try {
@@ -234,7 +268,7 @@ export function DatabaseManager() {
             <h2 className="text-lg font-semibold text-zinc-900">Respaldos Locales</h2>
           </div>
           <div className="p-6 space-y-4">
-            <p className="text-sm text-zinc-600">Exporta tu base de datos a un archivo JSON o restaura un respaldo previo.</p>
+            <p className="text-sm text-zinc-600">Exporta tu base de datos a un archivo JSON o CSV, o restaura un respaldo previo.</p>
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleExportLocal}
@@ -245,7 +279,18 @@ export function DatabaseManager() {
                 Exportar JSON
               </button>
               
-              {isAdmin && (
+              <button
+                onClick={handleExportCSV}
+                disabled={processing}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-medium hover:bg-emerald-100 disabled:opacity-50 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                Exportar CSV
+              </button>
+            </div>
+
+            {isAdmin && (
+              <div className="flex flex-col sm:flex-row gap-3 mt-3">
                 <div className="flex-1 relative">
                   <input
                     type="file"
@@ -263,8 +308,25 @@ export function DatabaseManager() {
                     Importar JSON
                   </button>
                 </div>
-              )}
-            </div>
+
+                <div className="flex-1 relative">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportCSV}
+                    disabled={processing}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <button
+                    disabled={processing}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-zinc-200 text-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 transition-all"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Importar CSV
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -13,6 +13,8 @@ export interface Equipment {
   id: string;
   name: string;
   packageUnit: string;
+  machineSize?: 'small' | 'medium' | 'large';
+  foundationType?: 'rigid' | 'flexible';
   techniques: string[];
   driveType: string;
   inspectionPoints: string[];

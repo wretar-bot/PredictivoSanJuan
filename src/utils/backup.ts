@@ -1,5 +1,6 @@
 import { collection, getDocs, query, where, writeBatch, doc, addDoc, serverTimestamp, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import Papa from 'papaparse';
 
 export const generateBackupData = async () => {
   if (!auth.currentUser) return null;
@@ -95,6 +96,135 @@ export const clearDatabase = async () => {
     if (count >= 400) await commit();
   }
   await commit();
+};
+
+export const exportDatabaseCSV = async () => {
+  if (!auth.currentUser) return;
+  
+  const equipmentSnap = await getDocs(query(collection(db, 'equipment')));
+  const recordsSnap = await getDocs(query(collection(db, 'maintenance_records')));
+  
+  const equipmentData = equipmentSnap.docs.map(d => {
+    const data = d.data({ serverTimestamps: 'estimate' });
+    return {
+      id: d.id,
+      ...data,
+      techniques: JSON.stringify(data.techniques || []),
+      inspectionPoints: JSON.stringify(data.inspectionPoints || []),
+      alarms: JSON.stringify(data.alarms || {}),
+      createdAt: data.createdAt?.toMillis() || '',
+    };
+  });
+
+  const recordsData = recordsSnap.docs.map(d => {
+    const data = d.data({ serverTimestamps: 'estimate' });
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toMillis() || '',
+    };
+  });
+
+  const downloadCSV = (csv: string, filename: string) => {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (equipmentData.length > 0) {
+    const eqCsv = Papa.unparse(equipmentData);
+    downloadCSV(eqCsv, `equipos_${new Date().toISOString().split('T')[0]}.csv`);
+  }
+  
+  if (recordsData.length > 0) {
+    setTimeout(() => {
+      const recCsv = Papa.unparse(recordsData);
+      downloadCSV(recCsv, `registros_${new Date().toISOString().split('T')[0]}.csv`);
+    }, 500);
+  }
+};
+
+export const importCSV = async (file: File) => {
+  if (!auth.currentUser) return;
+  const uid = auth.currentUser.uid;
+
+  return new Promise<void>((resolve, reject) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const data = results.data as any[];
+          if (data.length === 0) {
+            resolve();
+            return;
+          }
+
+          let batch = writeBatch(db);
+          let count = 0;
+
+          const commit = async () => {
+            if (count > 0) {
+              await batch.commit();
+              batch = writeBatch(db);
+              count = 0;
+            }
+          };
+
+          // Determine type based on columns
+          const isEquipment = 'packageUnit' in data[0] || 'inspectionPoints' in data[0];
+          const collectionName = isEquipment ? 'equipment' : 'maintenance_records';
+
+          for (const row of data) {
+            const { id, ...rowData } = row;
+            
+            // Parse JSON strings back to objects/arrays
+            if (isEquipment) {
+              try { rowData.techniques = JSON.parse(rowData.techniques); } catch (e) { rowData.techniques = []; }
+              try { rowData.inspectionPoints = JSON.parse(rowData.inspectionPoints); } catch (e) { rowData.inspectionPoints = []; }
+              try { rowData.alarms = JSON.parse(rowData.alarms); } catch (e) { rowData.alarms = {}; }
+            }
+
+            // Parse createdAt
+            if (rowData.createdAt) {
+              const millis = parseInt(rowData.createdAt, 10);
+              if (!isNaN(millis)) {
+                rowData.createdAt = Timestamp.fromMillis(millis);
+              } else {
+                rowData.createdAt = serverTimestamp();
+              }
+            } else {
+              rowData.createdAt = serverTimestamp();
+            }
+
+            // Ensure authorUid
+            rowData.authorUid = uid;
+
+            // Convert numeric fields for records
+            if (!isEquipment && rowData.value) {
+              rowData.value = Number(rowData.value);
+            }
+
+            batch.set(doc(db, collectionName, id || doc(collection(db, collectionName)).id), rowData);
+            count++;
+            if (count >= 400) await commit();
+          }
+
+          await commit();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      },
+      error: (error) => {
+        reject(error);
+      }
+    });
+  });
 };
 
 export const restoreBackup = async (jsonData: string) => {

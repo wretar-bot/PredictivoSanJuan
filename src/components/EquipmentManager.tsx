@@ -15,6 +15,8 @@ export function EquipmentManager() {
   const initialFormData = {
     name: '',
     packageUnit: '',
+    machineSize: 'medium' as 'small' | 'medium' | 'large',
+    foundationType: 'rigid' as 'rigid' | 'flexible',
     techniques: { termografia: true, ultrasonido: true, vibraciones: true },
     driveType: 'Bomba',
     customDriveType: '',
@@ -86,6 +88,8 @@ export function EquipmentManager() {
     setFormData({
       name: eq.name,
       packageUnit: eq.packageUnit || '',
+      machineSize: eq.machineSize || 'medium',
+      foundationType: eq.foundationType || 'rigid',
       techniques: {
         termografia: eq.techniques?.includes('termografia') || (eq as any).technique === 'termografia',
         ultrasonido: eq.techniques?.includes('ultrasonido') || (eq as any).technique === 'ultrasonido',
@@ -109,6 +113,31 @@ export function EquipmentManager() {
   const handleCancelEdit = () => {
     setEditingId(null);
     setFormData(initialFormData);
+  };
+
+  const getRecommendedAlarms = (size: 'small' | 'medium' | 'large', foundation: 'rigid' | 'flexible') => {
+    if (size === 'small') return { warning: 2.8, danger: 4.5 };
+    if (size === 'medium') return { warning: 4.5, danger: 7.1 };
+    if (size === 'large' && foundation === 'rigid') return { warning: 7.1, danger: 11.2 };
+    return { warning: 11.2, danger: 18.0 }; // large flexible
+  };
+
+  const handleSizeChange = (size: 'small' | 'medium' | 'large') => {
+    const newAlarms = getRecommendedAlarms(size, formData.foundationType);
+    setFormData(prev => ({
+      ...prev,
+      machineSize: size,
+      alarms: { ...prev.alarms, vibraciones: newAlarms }
+    }));
+  };
+
+  const handleFoundationChange = (foundation: 'rigid' | 'flexible') => {
+    const newAlarms = getRecommendedAlarms(formData.machineSize, foundation);
+    setFormData(prev => ({
+      ...prev,
+      foundationType: foundation,
+      alarms: { ...prev.alarms, vibraciones: newAlarms }
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,6 +184,8 @@ export function EquipmentManager() {
     const equipmentData = {
       name: formData.name,
       packageUnit: formData.packageUnit || '',
+      machineSize: formData.machineSize,
+      foundationType: formData.foundationType,
       techniques: selectedTechniques,
       driveType: actualDriveType,
       inspectionPoints: points,
@@ -283,6 +314,38 @@ export function EquipmentManager() {
                 />
               </div>
 
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-zinc-700">Tamaño / Potencia (ISO 10816)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${formData.machineSize === 'small' ? 'border-indigo-500 bg-indigo-50' : 'border-zinc-200 bg-white'}`}>
+                    <input type="radio" name="machineSize" value="small" checked={formData.machineSize === 'small'} onChange={() => handleSizeChange('small')} className="sr-only" />
+                    <span className="text-sm font-medium text-zinc-900">Pequeña (&lt; 15 kW)</span>
+                  </label>
+                  <label className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${formData.machineSize === 'medium' ? 'border-indigo-500 bg-indigo-50' : 'border-zinc-200 bg-white'}`}>
+                    <input type="radio" name="machineSize" value="medium" checked={formData.machineSize === 'medium'} onChange={() => handleSizeChange('medium')} className="sr-only" />
+                    <span className="text-sm font-medium text-zinc-900">Mediana (15-75 kW)</span>
+                  </label>
+                  <label className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${formData.machineSize === 'large' ? 'border-indigo-500 bg-indigo-50' : 'border-zinc-200 bg-white'}`}>
+                    <input type="radio" name="machineSize" value="large" checked={formData.machineSize === 'large'} onChange={() => handleSizeChange('large')} className="sr-only" />
+                    <span className="text-sm font-medium text-zinc-900">Grande (&gt; 75 kW)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-zinc-700">Tipo de Base</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${formData.foundationType === 'rigid' ? 'border-indigo-500 bg-indigo-50' : 'border-zinc-200 bg-white'}`}>
+                    <input type="radio" name="foundationType" value="rigid" checked={formData.foundationType === 'rigid'} onChange={() => handleFoundationChange('rigid')} className="sr-only" />
+                    <span className="text-sm font-medium text-zinc-900">Rígida</span>
+                  </label>
+                  <label className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${formData.foundationType === 'flexible' ? 'border-indigo-500 bg-indigo-50' : 'border-zinc-200 bg-white'}`}>
+                    <input type="radio" name="foundationType" value="flexible" checked={formData.foundationType === 'flexible'} onChange={() => handleFoundationChange('flexible')} className="sr-only" />
+                    <span className="text-sm font-medium text-zinc-900">Flexible</span>
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={saving}
@@ -404,7 +467,7 @@ export function EquipmentManager() {
                   Configuración de Alarmas
                 </h3>
                 <p className="text-xs text-zinc-500">
-                  Valores por defecto basados en normativas (ej. ISO 10816 para vibraciones).
+                  Valores por defecto basados en normativas (ej. ISO 10816 para vibraciones, ajustados según el tamaño y tipo de base).
                 </p>
 
                 {formData.techniques.termografia && (
@@ -510,6 +573,16 @@ export function EquipmentManager() {
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium capitalize">
                           {eq.driveType}
                         </span>
+                        {eq.machineSize && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium capitalize">
+                            {eq.machineSize === 'small' ? 'Pequeña (< 15 kW)' : eq.machineSize === 'medium' ? 'Mediana (15-75 kW)' : 'Grande (> 75 kW)'}
+                          </span>
+                        )}
+                        {eq.foundationType && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-medium capitalize">
+                            Base {eq.foundationType === 'rigid' ? 'Rígida' : 'Flexible'}
+                          </span>
+                        )}
                       </div>
                       
                       <div>
