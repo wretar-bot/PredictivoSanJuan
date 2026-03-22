@@ -24,6 +24,10 @@ export interface Equipment {
   authorUid: string;
   createdAt: any;
   operatingHours?: number;
+  motorShaftDiameter?: number;
+  motorBearingType?: string;
+  driveShaftDiameter?: number;
+  driveBearingType?: string;
 }
 
 export interface MaintenanceRecord {
@@ -41,6 +45,7 @@ export interface MaintenanceRecord {
   authorName?: string;
   greaseType?: string;
   operatingHours?: number;
+  lubricationPerformed?: boolean;
 }
 
 export enum OperationType {

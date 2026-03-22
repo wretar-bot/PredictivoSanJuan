@@ -8,6 +8,7 @@ import { Search, Filter, Trash2, Activity, Thermometer, Waves, ChevronDown, Chev
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 import { generateRuleBasedAnalysis } from '../utils/analysisGenerator';
+import { getLubricationRecommendation } from '../utils/lubrication';
 
 export function Dashboard() {
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
@@ -204,6 +205,59 @@ export function Dashboard() {
     equipmentStatusCounts[status as keyof typeof equipmentStatusCounts]++;
   });
 
+  const lubricationAlerts: { equipment: Equipment, point: string, type: 'motor' | 'drive', currentHours: number, lastHours: number, recommended: number }[] = [];
+  
+  Object.values(equipments).forEach(eq => {
+    if (!eq.operatingHours) return;
+
+    const eqRecords = records.filter(r => r.equipmentId === eq.id && r.technique === 'lubricacion' && r.lubricationPerformed !== false);
+    
+    // Check Motor
+    if (eq.inspectionPoints.some(p => p.startsWith('Motor') && (p.includes('Lado Libre') || p.includes('Lado Cople')))) {
+      const rec = getLubricationRecommendation(eq.machineSize || 'medium', eq.motorShaftDiameter, eq.motorBearingType);
+      const motorRecords = eqRecords.filter(r => r.measurementPoint.startsWith('Motor') && (r.measurementPoint.includes('Lado Libre') || r.measurementPoint.includes('Lado Cople')));
+      
+      let lastHours = 0;
+      if (motorRecords.length > 0) {
+        // Find the record with highest operatingHours
+        lastHours = Math.max(...motorRecords.map(r => r.operatingHours || 0));
+      }
+
+      if (eq.operatingHours - lastHours >= rec.frequency) {
+        lubricationAlerts.push({
+          equipment: eq,
+          point: 'Motor',
+          type: 'motor',
+          currentHours: eq.operatingHours,
+          lastHours,
+          recommended: rec.frequency
+        });
+      }
+    }
+
+    // Check Drive
+    if (eq.inspectionPoints.some(p => !p.startsWith('Motor') && (p.includes('Lado Libre') || p.includes('Lado Cople')))) {
+      const rec = getLubricationRecommendation(eq.machineSize || 'medium', eq.driveShaftDiameter, eq.driveBearingType);
+      const driveRecords = eqRecords.filter(r => !r.measurementPoint.startsWith('Motor') && (r.measurementPoint.includes('Lado Libre') || r.measurementPoint.includes('Lado Cople')));
+      
+      let lastHours = 0;
+      if (driveRecords.length > 0) {
+        lastHours = Math.max(...driveRecords.map(r => r.operatingHours || 0));
+      }
+
+      if (eq.operatingHours - lastHours >= rec.frequency) {
+        lubricationAlerts.push({
+          equipment: eq,
+          point: 'Accionamiento',
+          type: 'drive',
+          currentHours: eq.operatingHours,
+          lastHours,
+          recommended: rec.frequency
+        });
+      }
+    }
+  });
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900"></div></div>;
   }
@@ -286,6 +340,38 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Alertas de Lubricación */}
+      {lubricationAlerts.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+              <span className="text-amber-600 font-bold text-sm">L</span>
+            </div>
+            <h2 className="text-lg font-semibold text-amber-900">Equipos que requieren lubricación</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {lubricationAlerts.map((alert, idx) => (
+              <div key={idx} className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm flex flex-col gap-2">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold text-zinc-900">{alert.equipment.name}</h3>
+                  <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-800 rounded-full">
+                    {alert.point}
+                  </span>
+                </div>
+                <div className="text-sm text-zinc-600 space-y-1">
+                  <p>Horas actuales: <span className="font-mono font-medium">{alert.currentHours}</span></p>
+                  <p>Última lubricación: <span className="font-mono font-medium">{alert.lastHours}</span></p>
+                  <p>Frecuencia recomendada: <span className="font-mono font-medium">{alert.recommended}</span></p>
+                </div>
+                <div className="mt-2 pt-2 border-t border-amber-50 text-xs font-medium text-amber-700">
+                  Excedido por: {alert.currentHours - alert.lastHours - alert.recommended} horas
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {Object.keys(groupedRecords).length === 0 ? (
         <div className="bg-white border border-zinc-200 border-dashed rounded-2xl p-12 text-center text-zinc-500">
           No se encontraron registros.
@@ -350,11 +436,15 @@ export function Dashboard() {
                   <div className="p-6 space-y-10">
                     {Object.entries(data.points).map(([pointName, pointRecords]) => {
                       // Prepare data for chart (reverse to show chronological order left-to-right)
-                      const chartData = [...pointRecords].reverse().map(r => ({
-                        date: r.createdAt?.toDate ? format(r.createdAt.toDate(), 'dd/MM/yy') : '',
-                        value: r.value,
-                        unit: r.unit
-                      }));
+                      const chartData = [...pointRecords]
+                        .filter((r: any) => tech !== 'lubricacion' || r.lubricationPerformed !== false)
+                        .reverse()
+                        .map(r => ({
+                          date: r.createdAt?.toDate ? format(r.createdAt.toDate(), 'dd/MM/yy') : '',
+                          operatingHours: r.operatingHours || 0,
+                          value: r.value,
+                          unit: r.unit
+                        }));
 
                       return (
                         <div key={pointName} className="space-y-4">
@@ -388,12 +478,13 @@ export function Dashboard() {
                               <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                                  <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} stroke="#a1a1aa" dy={10} />
+                                  <XAxis dataKey={tech === 'lubricacion' ? 'operatingHours' : 'date'} fontSize={12} tickLine={false} axisLine={false} stroke="#a1a1aa" dy={10} />
                                   <YAxis fontSize={12} tickLine={false} axisLine={false} stroke="#a1a1aa" width={40} />
                                   <Tooltip 
                                     contentStyle={{ borderRadius: '8px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                     itemStyle={{ color: '#18181b', fontWeight: 500 }}
                                     formatter={(value: number, name: string, props: any) => [`${value} ${props.payload.unit}`, 'Valor']}
+                                    labelFormatter={(label) => tech === 'lubricacion' ? `${label} horas` : label}
                                     labelStyle={{ color: '#71717a', marginBottom: '4px' }}
                                   />
                                   {(() => {
@@ -433,6 +524,7 @@ export function Dashboard() {
                                   <th className="px-4 py-3">Valor</th>
                                   {tech === 'lubricacion' && (
                                     <>
+                                      <th className="px-4 py-3">Realizado</th>
                                       <th className="px-4 py-3">Tipo de Grasa</th>
                                       <th className="px-4 py-3">Horas Op.</th>
                                     </>
@@ -451,16 +543,27 @@ export function Dashboard() {
                                       </td>
                                       <td className="px-4 py-3 font-mono text-zinc-900">{record.omNumber}</td>
                                       <td className="px-4 py-3 font-mono font-medium">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md ${
-                                          status === 'danger' ? 'bg-red-100 text-red-700' :
-                                          status === 'warning' ? 'bg-orange-100 text-orange-700' :
-                                          'bg-emerald-100 text-emerald-700'
-                                        }`}>
-                                          {record.value} {record.unit}
-                                        </span>
+                                        {tech === 'lubricacion' && record.lubricationPerformed === false ? (
+                                          <span className="text-zinc-400">-</span>
+                                        ) : (
+                                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md ${
+                                            status === 'danger' ? 'bg-red-100 text-red-700' :
+                                            status === 'warning' ? 'bg-orange-100 text-orange-700' :
+                                            'bg-emerald-100 text-emerald-700'
+                                          }`}>
+                                            {record.value} {record.unit}
+                                          </span>
+                                        )}
                                       </td>
                                       {tech === 'lubricacion' && (
                                         <>
+                                          <td className="px-4 py-3">
+                                            {record.lubricationPerformed !== false ? (
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-xs font-medium">Sí</span>
+                                            ) : (
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 text-xs font-medium">No</span>
+                                            )}
+                                          </td>
                                           <td className="px-4 py-3 text-zinc-600">{record.greaseType || '-'}</td>
                                           <td className="px-4 py-3 text-zinc-600">{record.operatingHours || '-'}</td>
                                         </>

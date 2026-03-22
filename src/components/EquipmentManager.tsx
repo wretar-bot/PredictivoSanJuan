@@ -6,6 +6,8 @@ import { handleFirestoreError } from '../utils/errorHandler';
 import { createFirestoreBackup, exportEquipmentCSV, importCSV } from '../utils/backup';
 import { Plus, Trash2, Edit2, Loader2, Settings2, Thermometer, Waves, Activity, CheckSquare, X, Copy, Download, Upload } from 'lucide-react';
 
+import { getLubricationRecommendation } from '../utils/lubrication';
+
 export function EquipmentManager() {
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,11 @@ export function EquipmentManager() {
       vibraciones: { warning: 4.5, danger: 7.1 },
       ultrasonido: { warning: 35, danger: 45 }
     },
-    operatingHours: 0
+    operatingHours: 0,
+    motorShaftDiameter: '',
+    motorBearingType: '',
+    driveShaftDiameter: '',
+    driveBearingType: ''
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -107,7 +113,11 @@ export function EquipmentManager() {
         vibraciones: eq.alarms?.vibraciones || initialFormData.alarms.vibraciones,
         ultrasonido: eq.alarms?.ultrasonido || initialFormData.alarms.ultrasonido
       },
-      operatingHours: eq.operatingHours || 0
+      operatingHours: eq.operatingHours || 0,
+      motorShaftDiameter: eq.motorShaftDiameter ? eq.motorShaftDiameter.toString() : '',
+      motorBearingType: eq.motorBearingType || '',
+      driveShaftDiameter: eq.driveShaftDiameter ? eq.driveShaftDiameter.toString() : '',
+      driveBearingType: eq.driveBearingType || ''
     });
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -184,7 +194,7 @@ export function EquipmentManager() {
 
     setSaving(true);
     
-    const equipmentData = {
+    const equipmentData: any = {
       name: formData.name,
       packageUnit: formData.packageUnit || '',
       machineSize: formData.machineSize,
@@ -196,6 +206,11 @@ export function EquipmentManager() {
       authorUid: auth.currentUser.uid,
       operatingHours: formData.operatingHours,
     };
+
+    if (formData.motorShaftDiameter) equipmentData.motorShaftDiameter = Number(formData.motorShaftDiameter);
+    if (formData.motorBearingType) equipmentData.motorBearingType = formData.motorBearingType;
+    if (formData.driveShaftDiameter) equipmentData.driveShaftDiameter = Number(formData.driveShaftDiameter);
+    if (formData.driveBearingType) equipmentData.driveBearingType = formData.driveBearingType;
 
     if (editingId) {
       updateDoc(doc(db, 'equipment', editingId), equipmentData).catch(error => {
@@ -463,7 +478,7 @@ export function EquipmentManager() {
                 </h3>
                 
                 {/* Motor */}
-                <div className="space-y-2 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+                <div className="space-y-3 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
                   <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Motor</label>
                   <div className="grid grid-cols-1 gap-2 mt-2">
                     <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
@@ -478,6 +493,16 @@ export function EquipmentManager() {
                       <input type="checkbox" checked={formData.motorPoints.cuerpo} onChange={e => setFormData({...formData, motorPoints: {...formData.motorPoints, cuerpo: e.target.checked}})} className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
                       Cuerpo
                     </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-zinc-200">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700">Diámetro Flecha (mm)</label>
+                      <input type="number" step="any" min="0" value={formData.motorShaftDiameter} onChange={e => setFormData({...formData, motorShaftDiameter: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. 50" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700">Tipo de Rodamiento</label>
+                      <input type="text" value={formData.motorBearingType} onChange={e => setFormData({...formData, motorBearingType: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. Bolas" />
+                    </div>
                   </div>
                 </div>
 
@@ -519,6 +544,16 @@ export function EquipmentManager() {
                       <input type="checkbox" checked={formData.drivePoints.cuerpo} onChange={e => setFormData({...formData, drivePoints: {...formData.drivePoints, cuerpo: e.target.checked}})} className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
                       Cuerpo
                     </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-zinc-200">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700">Diámetro Flecha (mm)</label>
+                      <input type="number" step="any" min="0" value={formData.driveShaftDiameter} onChange={e => setFormData({...formData, driveShaftDiameter: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. 60" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700">Tipo de Rodamiento</label>
+                      <input type="text" value={formData.driveBearingType} onChange={e => setFormData({...formData, driveBearingType: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. Rodillos" />
+                    </div>
                   </div>
                 </div>
 
@@ -683,6 +718,52 @@ export function EquipmentManager() {
                           ))}
                         </div>
                       </div>
+
+                      {eq.techniques.includes('lubricacion') && (
+                        <div className="mt-4 pt-4 border-t border-zinc-100">
+                          <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Recomendaciones de Lubricación</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {eq.inspectionPoints.some(p => p.startsWith('Motor') && (p.includes('Lado Libre') || p.includes('Lado Cople'))) && (
+                              <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100/50">
+                                <h5 className="text-xs font-medium text-amber-800 mb-1">Motor</h5>
+                                {(() => {
+                                  const rec = getLubricationRecommendation(eq.machineSize || 'medium', eq.motorShaftDiameter, eq.motorBearingType);
+                                  return (
+                                    <div className="text-xs text-amber-700/80 space-y-0.5">
+                                      <p>Cantidad: <span className="font-semibold text-amber-900">{rec.quantity}g</span></p>
+                                      <p>Frecuencia: <span className="font-semibold text-amber-900">{rec.frequency} hrs</span></p>
+                                      {(eq.motorShaftDiameter || eq.motorBearingType) && (
+                                        <p className="text-[10px] mt-1 opacity-75">
+                                          Basado en: {eq.motorShaftDiameter ? `Ø${eq.motorShaftDiameter}mm` : ''} {eq.motorBearingType ? `(${eq.motorBearingType})` : ''}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                            {eq.inspectionPoints.some(p => !p.startsWith('Motor') && (p.includes('Lado Libre') || p.includes('Lado Cople'))) && (
+                              <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100/50">
+                                <h5 className="text-xs font-medium text-amber-800 mb-1">Accionamiento</h5>
+                                {(() => {
+                                  const rec = getLubricationRecommendation(eq.machineSize || 'medium', eq.driveShaftDiameter, eq.driveBearingType);
+                                  return (
+                                    <div className="text-xs text-amber-700/80 space-y-0.5">
+                                      <p>Cantidad: <span className="font-semibold text-amber-900">{rec.quantity}g</span></p>
+                                      <p>Frecuencia: <span className="font-semibold text-amber-900">{rec.frequency} hrs</span></p>
+                                      {(eq.driveShaftDiameter || eq.driveBearingType) && (
+                                        <p className="text-[10px] mt-1 opacity-75">
+                                          Basado en: {eq.driveShaftDiameter ? `Ø${eq.driveShaftDiameter}mm` : ''} {eq.driveBearingType ? `(${eq.driveBearingType})` : ''}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0">

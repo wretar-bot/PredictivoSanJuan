@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { OperationType, Equipment } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
@@ -23,7 +23,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     unit: '',
     notes: '',
     greaseType: '',
-    operatingHours: ''
+    operatingHours: '',
+    lubricationPerformed: true
   });
 
   useEffect(() => {
@@ -107,7 +108,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         technique: defaultTechnique,
         measurementPoint: '', // Reset point when equipment changes
         unit: defaultUnit,
-        operatingHours: eq.operatingHours ? eq.operatingHours.toString() : ''
+        operatingHours: eq.operatingHours ? eq.operatingHours.toString() : '',
+        lubricationPerformed: defaultTechnique.toLowerCase() === 'lubricacion' ? true : prev.lubricationPerformed
       }));
     } else {
       setFormData(prev => ({
@@ -117,7 +119,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         measurementPoint: '',
         technique: 'termografia',
         unit: '',
-        operatingHours: ''
+        operatingHours: '',
+        lubricationPerformed: true
       }));
     }
   };
@@ -143,7 +146,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         ...prev,
         technique: newTechnique,
         unit: newUnit,
-        measurementPoint: newMeasurementPoint
+        measurementPoint: newMeasurementPoint,
+        lubricationPerformed: newTechnique.toLowerCase() === 'lubricacion' ? true : prev.lubricationPerformed
       };
     });
   };
@@ -165,7 +169,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
       equipmentName: formData.equipmentName,
       measurementPoint: formData.measurementPoint,
       technique: formData.technique,
-      value: Number(formData.value),
+      value: formData.technique === 'lubricacion' && !formData.lubricationPerformed ? 0 : Number(formData.value),
       unit: formData.unit,
       notes: formData.notes,
       createdAt: serverTimestamp(),
@@ -174,7 +178,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     if (formData.technique === 'lubricacion') {
-      recordData.greaseType = formData.greaseType;
+      recordData.lubricationPerformed = formData.lubricationPerformed;
+      recordData.greaseType = formData.lubricationPerformed ? formData.greaseType : '';
       recordData.operatingHours = Number(formData.operatingHours);
     }
 
@@ -250,6 +255,12 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     if (tech === 'vibraciones' || tech === 'ultrasonido') {
       return !point.toLowerCase().includes('cuerpo');
     }
+    
+    if (tech === 'lubricacion') {
+      const lowerPoint = point.toLowerCase();
+      return lowerPoint.includes('lado cople') || lowerPoint.includes('lado libre');
+    }
+    
     return true;
   }) || [];
 
@@ -365,49 +376,70 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
               <p className="text-xs text-zinc-400">Selecciona la técnica de medición.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:col-span-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-700">Valor</label>
-                <input
-                  required
-                  type="number"
-                  step="any"
-                  name="value"
-                  value={formData.value}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all font-mono"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-700">Unidad</label>
-                <input
-                  required
-                  disabled
-                  type="text"
-                  name="unit"
-                  value={formData.unit}
-                  className="w-full px-4 py-2 bg-zinc-100 border border-zinc-200 rounded-xl text-sm text-zinc-500 cursor-not-allowed transition-all"
-                  placeholder="Se asigna automáticamente"
-                />
-              </div>
-            </div>
-
             {formData.technique === 'lubricacion' && (
+              <div className="md:col-span-2 bg-amber-50/50 p-4 rounded-xl border border-amber-100/50 mb-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="lubricationPerformed"
+                    checked={formData.lubricationPerformed}
+                    onChange={(e) => setFormData({ ...formData, lubricationPerformed: e.target.checked })}
+                    className="w-5 h-5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <span className="text-sm font-medium text-amber-900">
+                    Confirmar que se realizó la lubricación en este registro
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {formData.technique !== 'lubricacion' || formData.lubricationPerformed ? (
               <div className="grid grid-cols-2 gap-4 md:col-span-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-700">Tipo de Grasa</label>
+                  <label className="text-sm font-medium text-zinc-700">Valor {formData.technique === 'lubricacion' ? '(Cantidad)' : ''}</label>
                   <input
                     required
-                    type="text"
-                    name="greaseType"
-                    value={formData.greaseType}
+                    type="number"
+                    step="any"
+                    name="value"
+                    value={formData.value}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
-                    placeholder="Ej. Grasa de Litio EP2"
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all font-mono"
+                    placeholder="0.00"
                   />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-700">Unidad</label>
+                  <input
+                    required
+                    disabled
+                    type="text"
+                    name="unit"
+                    value={formData.unit}
+                    className="w-full px-4 py-2 bg-zinc-100 border border-zinc-200 rounded-xl text-sm text-zinc-500 cursor-not-allowed transition-all"
+                    placeholder="Se asigna automáticamente"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {formData.technique === 'lubricacion' && (
+              <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                {formData.lubricationPerformed && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700">Tipo de Grasa</label>
+                    <input
+                      required
+                      type="text"
+                      name="greaseType"
+                      value={formData.greaseType}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                      placeholder="Ej. Grasa de Litio EP2"
+                    />
+                  </div>
+                )}
+                <div className={`space-y-2 ${!formData.lubricationPerformed ? 'col-span-2' : ''}`}>
                   <label className="text-sm font-medium text-zinc-700">Horas de Operación</label>
                   <input
                     required

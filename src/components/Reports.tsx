@@ -400,11 +400,14 @@ export function Reports() {
 
                     <div className="grid grid-cols-1 gap-8">
                       {Object.entries(data.points).map(([pointName, pointRecords]: [string, any]) => {
-                        const chartData = pointRecords.map((r: any) => ({
-                          date: r.createdAt?.toDate ? format(r.createdAt.toDate(), 'dd/MM/yy') : '',
-                          value: r.value,
-                          unit: r.unit
-                        }));
+                        const chartData = pointRecords
+                          .filter((r: any) => tech !== 'lubricacion' || r.lubricationPerformed !== false)
+                          .map((r: any) => ({
+                            date: r.createdAt?.toDate ? format(r.createdAt.toDate(), 'dd/MM/yy') : '',
+                            operatingHours: r.operatingHours || 0,
+                            value: r.value,
+                            unit: r.unit
+                          }));
 
                         return (
                           <div key={pointName} className="border border-zinc-200 rounded-xl p-5 print:border-zinc-300 print:break-inside-avoid">
@@ -420,11 +423,12 @@ export function Reports() {
                                   <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                                      <XAxis dataKey="date" fontSize={11} tickLine={false} axisLine={false} stroke="#a1a1aa" dy={10} />
+                                      <XAxis dataKey={tech === 'lubricacion' ? 'operatingHours' : 'date'} fontSize={11} tickLine={false} axisLine={false} stroke="#a1a1aa" dy={10} />
                                       <YAxis fontSize={11} tickLine={false} axisLine={false} stroke="#a1a1aa" width={40} />
                                       <Tooltip 
                                         contentStyle={{ borderRadius: '8px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                         formatter={(value: number, name: string, props: any) => [`${value} ${props.payload.unit}`, 'Valor']}
+                                        labelFormatter={(label) => tech === 'lubricacion' ? `${label} hrs` : label}
                                       />
                                       <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3, fill: '#4f46e5' }} />
                                     </LineChart>
@@ -446,6 +450,7 @@ export function Reports() {
                                       <th className="px-3 py-2">Valor</th>
                                       {tech === 'lubricacion' && (
                                         <>
+                                          <th className="px-3 py-2">Realizado</th>
                                           <th className="px-3 py-2">Tipo de Grasa</th>
                                           <th className="px-3 py-2">Horas Op.</th>
                                         </>
@@ -462,10 +467,23 @@ export function Reports() {
                                         </td>
                                         <td className="px-3 py-2 font-mono text-zinc-900">{record.omNumber}</td>
                                         <td className="px-3 py-2 font-mono font-medium text-zinc-900">
-                                          {record.value} <span className="text-zinc-500 font-normal">{record.unit}</span>
+                                          {tech === 'lubricacion' && record.lubricationPerformed === false ? (
+                                            <span className="text-zinc-400">-</span>
+                                          ) : (
+                                            <>
+                                              {record.value} <span className="text-zinc-500 font-normal">{record.unit}</span>
+                                            </>
+                                          )}
                                         </td>
                                         {tech === 'lubricacion' && (
                                           <>
+                                            <td className="px-3 py-2">
+                                              {record.lubricationPerformed !== false ? (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-xs font-medium">Sí</span>
+                                              ) : (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 text-xs font-medium">No</span>
+                                              )}
+                                            </td>
                                             <td className="px-3 py-2 text-zinc-600">{record.greaseType || '-'}</td>
                                             <td className="px-3 py-2 text-zinc-600">{record.operatingHours || '-'}</td>
                                           </>
