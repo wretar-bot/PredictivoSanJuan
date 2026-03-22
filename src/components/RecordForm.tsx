@@ -106,7 +106,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         equipmentName: eq.packageUnit ? `${eq.packageUnit} - ${eq.name}` : eq.name,
         technique: defaultTechnique,
         measurementPoint: '', // Reset point when equipment changes
-        unit: defaultUnit
+        unit: defaultUnit,
+        operatingHours: eq.operatingHours ? eq.operatingHours.toString() : ''
       }));
     } else {
       setFormData(prev => ({
@@ -115,7 +116,8 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         equipmentName: '',
         measurementPoint: '',
         technique: 'termografia',
-        unit: ''
+        unit: '',
+        operatingHours: ''
       }));
     }
   };
@@ -146,7 +148,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) return;
     

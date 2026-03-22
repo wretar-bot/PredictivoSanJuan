@@ -444,6 +444,12 @@ export function Reports() {
                                       <th className="px-3 py-2">Fecha</th>
                                       <th className="px-3 py-2">OM</th>
                                       <th className="px-3 py-2">Valor</th>
+                                      {tech === 'lubricacion' && (
+                                        <>
+                                          <th className="px-3 py-2">Tipo de Grasa</th>
+                                          <th className="px-3 py-2">Horas Op.</th>
+                                        </>
+                                      )}
                                       <th className="px-3 py-2">Notas</th>
                                     </tr>
                                   </thead>
@@ -458,6 +464,12 @@ export function Reports() {
                                         <td className="px-3 py-2 font-mono font-medium text-zinc-900">
                                           {record.value} <span className="text-zinc-500 font-normal">{record.unit}</span>
                                         </td>
+                                        {tech === 'lubricacion' && (
+                                          <>
+                                            <td className="px-3 py-2 text-zinc-600">{record.greaseType || '-'}</td>
+                                            <td className="px-3 py-2 text-zinc-600">{record.operatingHours || '-'}</td>
+                                          </>
+                                        )}
                                         <td className="px-3 py-2 text-zinc-500 truncate max-w-[150px]" title={record.notes}>
                                           {record.notes || '-'}
                                         </td>
