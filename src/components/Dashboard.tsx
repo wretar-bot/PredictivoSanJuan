@@ -9,8 +9,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import ReactMarkdown from 'react-markdown';
 import { generateRuleBasedAnalysis } from '../utils/analysisGenerator';
 import { getLubricationRecommendation } from '../utils/lubrication';
+import { EditRecordModal } from './EditRecordModal';
+import { Edit2 } from 'lucide-react';
 
-export function Dashboard() {
+export function Dashboard({ isAdmin }: { isAdmin?: boolean }) {
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [equipments, setEquipments] = useState<Record<string, Equipment>>({});
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,7 @@ export function Dashboard() {
   const [visibleCharts, setVisibleCharts] = useState<Record<string, boolean>>({});
   const [groupBy, setGroupBy] = useState<'equipment' | 'om'>('equipment');
   const [siteName, setSiteName] = useState('');
+  const [editingRecord, setEditingRecord] = useState<MaintenanceRecord | null>(null);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -572,13 +575,24 @@ export function Dashboard() {
                                         {record.notes || '-'}
                                       </td>
                                       <td className="px-4 py-3 text-right">
-                                        <button
-                                          onClick={() => handleDelete(record.id)}
-                                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                          title="Eliminar registro"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {isAdmin && (
+                                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              onClick={() => setEditingRecord(record)}
+                                              className="p-1.5 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                              title="Editar registro"
+                                            >
+                                              <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                              onClick={() => handleDelete(record.id)}
+                                              className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                              title="Eliminar registro"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          </div>
+                                        )}
                                       </td>
                                     </tr>
                                   );
@@ -625,6 +639,13 @@ export function Dashboard() {
     );
   })}
 </div>
+)}
+
+{editingRecord && (
+  <EditRecordModal
+    record={editingRecord}
+    onClose={() => setEditingRecord(null)}
+  />
 )}
 </div>
 );

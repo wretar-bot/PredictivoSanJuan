@@ -350,10 +350,10 @@ function AppContent() {
             transition={{ duration: 0.2 }}
             className="h-full flex-1"
           >
-            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'dashboard' && <Dashboard isAdmin={isAdmin} />}
             {activeTab === 'add' && <RecordForm />}
             {activeTab === 'equipment' && <EquipmentManager />}
-            {activeTab === 'reports' && <Reports />}
+            {activeTab === 'reports' && <Reports isAdmin={isAdmin} />}
             {activeTab === 'ai' && <AIAssistant />}
             {activeTab === 'database' && <DatabaseManager />}
             {activeTab === 'users' && isAdmin && <UserManagement />}

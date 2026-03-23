@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { OperationType, Equipment } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
@@ -14,6 +14,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
   const [allRecords, setAllRecords] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
     omNumber: '',
     equipmentId: '', // We store ID temporarily to find the equipment
     equipmentName: '',
@@ -172,7 +173,7 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
       value: formData.technique === 'lubricacion' && !formData.lubricationPerformed ? 0 : Number(formData.value),
       unit: formData.unit,
       notes: formData.notes,
-      createdAt: serverTimestamp(),
+      createdAt: formData.date ? Timestamp.fromDate(new Date(`${formData.date}T12:00:00`)) : serverTimestamp(),
       authorUid: auth.currentUser.uid,
       authorName: auth.currentUser.displayName || 'Usuario'
     };
@@ -290,6 +291,17 @@ export function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-zinc-700">Fecha del Registro</label>
+              <input
+                required
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm"
+              />
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-700">Orden de Mantenimiento (OM)</label>
               <input

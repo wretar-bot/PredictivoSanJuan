@@ -9,8 +9,11 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import ReactMarkdown from 'react-markdown';
 import { generateRuleBasedAnalysis } from '../utils/analysisGenerator';
 import { EsentiaLogo } from './EsentiaLogo';
+import { EditRecordModal } from './EditRecordModal';
+import { Edit2, Trash2 } from 'lucide-react';
+import { deleteDoc } from 'firebase/firestore';
 
-export function Reports() {
+export function Reports({ isAdmin }: { isAdmin?: boolean }) {
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +27,18 @@ export function Reports() {
   const [companyInfo, setCompanyInfo] = useState({ name: '', site: '' });
   const [reportNotes, setReportNotes] = useState<string>('');
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
+  const [editingRecord, setEditingRecord] = useState<MaintenanceRecord | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
+      try {
+        await deleteDoc(doc(db, 'maintenance_records', id));
+      } catch (error) {
+        console.error("Error deleting document: ", error);
+        alert("Hubo un error al eliminar el registro.");
+      }
+    }
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -456,12 +471,13 @@ export function Reports() {
                                         </>
                                       )}
                                       <th className="px-3 py-2">Notas</th>
+                                      {isAdmin && <th className="px-3 py-2 text-right print:hidden">Acciones</th>}
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-zinc-100 print:divide-zinc-200">
                                     {/* Show only last 5 records in report to save space */}
                                     {pointRecords.slice(-5).reverse().map((record: any) => (
-                                      <tr key={record.id}>
+                                      <tr key={record.id} className="group">
                                         <td className="px-3 py-2 text-zinc-600 whitespace-nowrap">
                                           {record.createdAt?.toDate ? format(record.createdAt.toDate(), 'dd/MM/yyyy') : '...'}
                                         </td>
@@ -491,6 +507,26 @@ export function Reports() {
                                         <td className="px-3 py-2 text-zinc-500 truncate max-w-[150px]" title={record.notes}>
                                           {record.notes || '-'}
                                         </td>
+                                        {isAdmin && (
+                                          <td className="px-3 py-2 text-right print:hidden">
+                                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button
+                                                onClick={() => setEditingRecord(record)}
+                                                className="p-1 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                                title="Editar registro"
+                                              >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDelete(record.id)}
+                                                className="p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                title="Eliminar registro"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          </td>
+                                        )}
                                       </tr>
                                     ))}
                                   </tbody>
@@ -529,6 +565,13 @@ export function Reports() {
             </div>
           )}
         </div>
+      )}
+
+      {editingRecord && (
+        <EditRecordModal
+          record={editingRecord}
+          onClose={() => setEditingRecord(null)}
+        />
       )}
     </div>
   );
