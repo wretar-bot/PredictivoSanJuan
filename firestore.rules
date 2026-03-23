@@ -73,7 +73,7 @@ service cloud.firestore {
     // Domain Validators
     function isValidMaintenanceRecord(data) {
       let requiredFields = ['omNumber', 'equipmentName', 'measurementPoint', 'technique', 'value', 'unit', 'createdAt', 'authorUid'];
-      let allowedFields = ['omNumber', 'equipmentId', 'equipmentName', 'measurementPoint', 'technique', 'value', 'unit', 'createdAt', 'authorUid', 'notes', 'authorName'];
+      let allowedFields = ['omNumber', 'equipmentId', 'equipmentName', 'measurementPoint', 'technique', 'value', 'unit', 'createdAt', 'authorUid', 'notes', 'authorName', 'lubricationPerformed', 'greaseType', 'operatingHours'];
       
       return hasRequiredFields(data, requiredFields) &&
              hasOnlyAllowedFields(data, allowedFields) &&
@@ -81,20 +81,23 @@ service cloud.firestore {
              isValidOptionalString(data, 'equipmentId', 1, 100) &&
              isValidString(data.equipmentName, 1, 200) &&
              isValidString(data.measurementPoint, 1, 200) &&
-             data.technique in ['termografia', 'ultrasonido', 'vibraciones'] &&
+             data.technique in ['termografia', 'ultrasonido', 'vibraciones', 'lubricacion'] &&
              data.value is number &&
              isValidString(data.unit, 1, 50) &&
              data.createdAt is timestamp &&
              isValidString(data.authorUid, 1, 100) &&
              isValidOptionalString(data, 'notes', 0, 1000) &&
-             isValidOptionalString(data, 'authorName', 0, 100);
+             isValidOptionalString(data, 'authorName', 0, 100) &&
+             (!('lubricationPerformed' in data) || data.lubricationPerformed is bool) &&
+             isValidOptionalString(data, 'greaseType', 0, 100) &&
+             (!('operatingHours' in data) || data.operatingHours is number);
     }
 
     function isValidTechniquesList(techniques) {
       return techniques is list && 
              techniques.size() > 0 && 
-             techniques.size() <= 3 &&
-             techniques.hasOnly(['termografia', 'ultrasonido', 'vibraciones']);
+             techniques.size() <= 4 &&
+             techniques.hasOnly(['termografia', 'ultrasonido', 'vibraciones', 'lubricacion']);
     }
 
     function isValidSettings(data) {
@@ -116,11 +119,11 @@ service cloud.firestore {
 
     function isValidEquipment(data) {
       let requiredFields = ['name', 'packageUnit', 'techniques', 'driveType', 'inspectionPoints', 'authorUid', 'createdAt'];
-      let allowedFields = ['name', 'packageUnit', 'machineSize', 'foundationType', 'techniques', 'technique', 'driveType', 'inspectionPoints', 'alarms', 'aiAnalysis', 'aiRecommendations', 'authorUid', 'createdAt'];
+      let allowedFields = ['name', 'packageUnit', 'machineSize', 'foundationType', 'techniques', 'technique', 'driveType', 'inspectionPoints', 'alarms', 'aiAnalysis', 'aiRecommendations', 'authorUid', 'createdAt', 'operatingHours', 'motorShaftDiameter', 'motorBearingType', 'motorGreaseType', 'driveShaftDiameter', 'driveBearingType', 'driveGreaseType'];
       return hasRequiredFields(data, requiredFields) &&
              hasOnlyAllowedFields(data, allowedFields) &&
              isValidString(data.name, 1, 200) &&
-             isValidString(data.packageUnit, 1, 200) &&
+             isValidString(data.packageUnit, 0, 200) &&
              isValidOptionalString(data, 'machineSize', 1, 20) &&
              isValidOptionalString(data, 'foundationType', 1, 20) &&
              isValidTechniquesList(data.techniques) &&
@@ -132,7 +135,14 @@ service cloud.firestore {
              isValidOptionalString(data, 'aiAnalysis', 0, 5000) &&
              isValidOptionalString(data, 'aiRecommendations', 0, 5000) &&
              data.createdAt is timestamp &&
-             isValidString(data.authorUid, 1, 100);
+             isValidString(data.authorUid, 1, 100) &&
+             (!('operatingHours' in data) || data.operatingHours is number) &&
+             (!('motorShaftDiameter' in data) || data.motorShaftDiameter is number) &&
+             isValidOptionalString(data, 'motorBearingType', 0, 100) &&
+             isValidOptionalString(data, 'motorGreaseType', 0, 100) &&
+             (!('driveShaftDiameter' in data) || data.driveShaftDiameter is number) &&
+             isValidOptionalString(data, 'driveBearingType', 0, 100) &&
+             isValidOptionalString(data, 'driveGreaseType', 0, 100);
     }
 
     match /authorized_users/{email} {

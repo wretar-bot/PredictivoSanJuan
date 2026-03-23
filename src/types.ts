@@ -26,8 +26,10 @@ export interface Equipment {
   operatingHours?: number;
   motorShaftDiameter?: number;
   motorBearingType?: string;
+  motorGreaseType?: string;
   driveShaftDiameter?: number;
   driveBearingType?: string;
+  driveGreaseType?: string;
 }
 
 export interface MaintenanceRecord {

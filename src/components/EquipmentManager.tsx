@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, deleteField } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Equipment, OperationType } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
@@ -33,8 +33,10 @@ export function EquipmentManager() {
     operatingHours: 0,
     motorShaftDiameter: '',
     motorBearingType: '',
+    motorGreaseType: '',
     driveShaftDiameter: '',
-    driveBearingType: ''
+    driveBearingType: '',
+    driveGreaseType: ''
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -116,8 +118,10 @@ export function EquipmentManager() {
       operatingHours: eq.operatingHours || 0,
       motorShaftDiameter: eq.motorShaftDiameter ? eq.motorShaftDiameter.toString() : '',
       motorBearingType: eq.motorBearingType || '',
+      motorGreaseType: eq.motorGreaseType || '',
       driveShaftDiameter: eq.driveShaftDiameter ? eq.driveShaftDiameter.toString() : '',
-      driveBearingType: eq.driveBearingType || ''
+      driveBearingType: eq.driveBearingType || '',
+      driveGreaseType: eq.driveGreaseType || ''
     });
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -205,12 +209,23 @@ export function EquipmentManager() {
       alarms: formData.alarms,
       authorUid: auth.currentUser.uid,
       operatingHours: formData.operatingHours,
+      motorBearingType: formData.motorBearingType || '',
+      motorGreaseType: formData.motorGreaseType || '',
+      driveBearingType: formData.driveBearingType || '',
+      driveGreaseType: formData.driveGreaseType || ''
     };
 
-    if (formData.motorShaftDiameter) equipmentData.motorShaftDiameter = Number(formData.motorShaftDiameter);
-    if (formData.motorBearingType) equipmentData.motorBearingType = formData.motorBearingType;
-    if (formData.driveShaftDiameter) equipmentData.driveShaftDiameter = Number(formData.driveShaftDiameter);
-    if (formData.driveBearingType) equipmentData.driveBearingType = formData.driveBearingType;
+    if (formData.motorShaftDiameter) {
+      equipmentData.motorShaftDiameter = Number(formData.motorShaftDiameter);
+    } else if (editingId) {
+      equipmentData.motorShaftDiameter = deleteField();
+    }
+
+    if (formData.driveShaftDiameter) {
+      equipmentData.driveShaftDiameter = Number(formData.driveShaftDiameter);
+    } else if (editingId) {
+      equipmentData.driveShaftDiameter = deleteField();
+    }
 
     if (editingId) {
       updateDoc(doc(db, 'equipment', editingId), equipmentData).catch(error => {
@@ -494,14 +509,32 @@ export function EquipmentManager() {
                       Cuerpo
                     </label>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-zinc-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-zinc-200">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-zinc-700">Diámetro Flecha (mm)</label>
                       <input type="number" step="any" min="0" value={formData.motorShaftDiameter} onChange={e => setFormData({...formData, motorShaftDiameter: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. 50" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-zinc-700">Tipo de Rodamiento</label>
-                      <input type="text" value={formData.motorBearingType} onChange={e => setFormData({...formData, motorBearingType: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. Bolas" />
+                      <select
+                        value={formData.motorBearingType}
+                        onChange={e => setFormData({...formData, motorBearingType: e.target.value})}
+                        className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="Bolas">Bolas</option>
+                        <option value="Rodillos Cilíndricos">Rodillos Cilíndricos</option>
+                        <option value="Rodillos Esféricos">Rodillos Esféricos</option>
+                        <option value="Rodillos Cónicos">Rodillos Cónicos</option>
+                        <option value="Agujas">Agujas</option>
+                        <option value="Fricción / Chumacera">Fricción / Chumacera</option>
+                        <option value="Axial">Axial</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700">Tipo de Grasa</label>
+                      <input type="text" value={formData.motorGreaseType} onChange={e => setFormData({...formData, motorGreaseType: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. Litio EP2" />
                     </div>
                   </div>
                 </div>
@@ -545,14 +578,32 @@ export function EquipmentManager() {
                       Cuerpo
                     </label>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-zinc-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-zinc-200">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-zinc-700">Diámetro Flecha (mm)</label>
                       <input type="number" step="any" min="0" value={formData.driveShaftDiameter} onChange={e => setFormData({...formData, driveShaftDiameter: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. 60" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-zinc-700">Tipo de Rodamiento</label>
-                      <input type="text" value={formData.driveBearingType} onChange={e => setFormData({...formData, driveBearingType: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. Rodillos" />
+                      <select
+                        value={formData.driveBearingType}
+                        onChange={e => setFormData({...formData, driveBearingType: e.target.value})}
+                        className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="Bolas">Bolas</option>
+                        <option value="Rodillos Cilíndricos">Rodillos Cilíndricos</option>
+                        <option value="Rodillos Esféricos">Rodillos Esféricos</option>
+                        <option value="Rodillos Cónicos">Rodillos Cónicos</option>
+                        <option value="Agujas">Agujas</option>
+                        <option value="Fricción / Chumacera">Fricción / Chumacera</option>
+                        <option value="Axial">Axial</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700">Tipo de Grasa</label>
+                      <input type="text" value={formData.driveGreaseType} onChange={e => setFormData({...formData, driveGreaseType: e.target.value})} className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all" placeholder="Ej. Litio EP2" />
                     </div>
                   </div>
                 </div>
@@ -679,7 +730,14 @@ export function EquipmentManager() {
                   <div key={eq.id} className={`bg-white border ${editingId === eq.id ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-zinc-200'} rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start transition-all`}>
                     <div className="space-y-3 flex-1">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-lg font-semibold text-zinc-900">{eq.name}</h3>
+                        <h3 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
+                          {eq.name}
+                          {eq.operatingHours !== undefined && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-sm font-medium">
+                              {eq.operatingHours} hrs
+                            </span>
+                          )}
+                        </h3>
                         <div className="flex gap-1.5 flex-wrap">
                           {(eq.techniques || ((eq as any).technique ? [(eq as any).technique] : [])).map((tech: string, idx: number) => (
                             <span key={tech || idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 text-xs font-medium capitalize">
@@ -699,11 +757,6 @@ export function EquipmentManager() {
                         {eq.foundationType && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-medium capitalize">
                             Base {eq.foundationType === 'rigid' ? 'Rígida' : 'Flexible'}
-                          </span>
-                        )}
-                        {eq.operatingHours !== undefined && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium capitalize">
-                            {eq.operatingHours} hrs
                           </span>
                         )}
                       </div>
